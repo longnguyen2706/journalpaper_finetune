@@ -148,10 +148,14 @@ def AlexNet(weights_path=None, heatmap=False):
 
     if weights_path:
         model.load_weights(weights_path)
-    return model
+
+    base_model = Model(inputs, dense_2)
+    return model, base_model
 
 
 if __name__ == '__main__':
     alexnet_weight = "/mnt/6B7855B538947C4E/deeplearning/pretrained_weights/alexnet_weights.h5"
-    alexnet = convnet('alexnet', alexnet_weight, False, None)
-    print(alexnet.summary())
+    # alexnet = convnet('alexnet', alexnet_weight, False, None)
+    model, base_model = AlexNet(alexnet_weight)
+    print(model.summary())
+    print(base_model.summary())

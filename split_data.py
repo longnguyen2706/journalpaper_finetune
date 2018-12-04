@@ -4,10 +4,12 @@ import datetime
 import os
 
 import numpy as np
+from PIL import Image
 from sklearn.model_selection import train_test_split
 from sklearn.utils import Bunch
 
-from utils import current_date, dump_pickle, load_pickle
+from utils import *
+import datetime
 
 
 class MyDataset():
@@ -145,6 +147,7 @@ def main():
     split_1= dict['data']['0']
     train_report = split_1['train_report']
     print_split_report('train', train_report)
+
 
 if __name__ == '__main__':
     main()

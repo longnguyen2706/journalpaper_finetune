@@ -248,7 +248,8 @@ def create_googlenet(weights_path=None):
     if weights_path:
         googlenet.load_weights(weights_path)
 
-    return googlenet
+    base_model = Model(input, loss3_flat)
+    return googlenet, base_model
 
 
 
@@ -264,8 +265,9 @@ if __name__ == "__main__":
     googlenet_weights = "/mnt/6B7855B538947C4E/deeplearning/pretrained_weights/googlenet_weights.h5"
 
     # Test pretrained model
-    model = create_googlenet(googlenet_weights)
+    model, base_model = create_googlenet(googlenet_weights)
     print(model.summary())
+    print(base_model.summary())
     # sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
     # model.compile(optimizer=sgd, loss='categorical_crossentropy')
     # out = model.predict(img) # note: the model has three outputs
