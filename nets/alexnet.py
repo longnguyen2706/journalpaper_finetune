@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from utils.customlayers import crosschannelnormalization
-from utils.customlayers import Softmax4D
-from utils.customlayers import splittensor
+from layers.alexnet_custom_layers import crosschannelnormalization
+from layers.alexnet_custom_layers import Softmax4D
+from layers.alexnet_custom_layers import splittensor
 from keras.layers import Activation
 from keras.layers import Dense
 from keras.layers import Dropout

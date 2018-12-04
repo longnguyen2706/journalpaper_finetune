@@ -4,7 +4,7 @@ from keras.layers import Input, Dense, Convolution2D, MaxPooling2D, AveragePooli
 from keras.models import Model
 from keras.regularizers import l2
 from keras.optimizers import SGD
-from utils.googlenet_custom_layers import PoolHelper,LRN
+from layers.googlenet_custom_layers import PoolHelper,LRN
 import theano.ifelse
 
 def create_googlenet(weights_path=None):
