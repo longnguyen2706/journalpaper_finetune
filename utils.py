@@ -37,7 +37,12 @@ image_data: (height, width, channel)
 def resize_image(image_data, height, width):
     return cv2.resize(image_data, (height, width))
 
-def prepare_numpy_data_arr(image_dir, image_short_path_arr, height, width):
+def normalize_image(image_data, mean, std):
+    offset_image = image_data-mean
+    mul_image = offset_image *(1.0/std)
+    return mul_image
+
+def prepare_numpy_data_arr(image_dir, image_short_path_arr, height, width, mean, std):
     data_arr = []
 
     for image_short_path in image_short_path_arr:
@@ -50,6 +55,9 @@ def prepare_numpy_data_arr(image_dir, image_short_path_arr, height, width):
 
         # do resize
         image_data = resize_image(image_data, width, height)
+
+        # do normalize
+        # image_data = normalize_image(image_data, mean, std)
 
         # reorder dim from (height, width, channel) -> (channel, height, width) to suit theano
         transposed_data = image_data.transpose(2, 0, 1)

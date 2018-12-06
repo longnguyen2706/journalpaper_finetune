@@ -22,6 +22,8 @@ def create_model_info(architecture):
         model_info['input_width'] = 227
         model_info['input_height'] = 227
         model_info['input_depth'] = 3
+        model_info['input_mean'] = 128
+        model_info['input_std'] = 128
         model_info['pretrained_weights'] = "/mnt/6B7855B538947C4E/deeplearning/pretrained_weights/alexnet_weights.h5"
 
     elif architecture == 'googlenet':
@@ -29,6 +31,8 @@ def create_model_info(architecture):
         model_info['input_width'] = 224
         model_info['input_height'] = 224
         model_info['input_depth'] = 3
+        model_info['input_mean'] = 128
+        model_info['input_std'] = 128
         model_info['pretrained_weights'] = '/mnt/6B7855B538947C4E/deeplearning/pretrained_weights/googlenet_weights.h5'
 
     else:
@@ -79,7 +83,7 @@ def set_model_trainable(model, num_base_layers, num_of_last_layer_finetune):
     return model
 
 
-def get_np_data(split, image_dir, height, width):
+def get_np_data(split, image_dir, model_info):
     train_images = split['train_files']
     train_labels = split['train_labels']
 
@@ -90,9 +94,15 @@ def get_np_data(split, image_dir, height, width):
     test_labels = split['test_labels']
     num_classes = len(split['class_names'])
 
-    train_data = prepare_numpy_data_arr(image_dir, train_images, height, width)
-    val_data = prepare_numpy_data_arr(image_dir, val_images, height, width)
-    test_data = prepare_numpy_data_arr(image_dir, test_images, height, width)
+    train_data = prepare_numpy_data_arr(image_dir, train_images, model_info['input_height'],
+                                        model_info['input_width'], model_info['input_mean'],
+                                        model_info['input_std'])
+    val_data = prepare_numpy_data_arr(image_dir, val_images, model_info['input_height'],
+                                        model_info['input_width'], model_info['input_mean'],
+                                        model_info['input_std'])
+    test_data = prepare_numpy_data_arr(image_dir, test_images, model_info['input_height'],
+                                        model_info['input_width'], model_info['input_mean'],
+                                        model_info['input_std'])
 
     train_labels = np_utils.to_categorical(np.asarray(train_labels), num_classes)
     val_labels = np_utils.to_categorical(np.asarray(val_labels), num_classes)
@@ -107,7 +117,7 @@ def get_np_data(split, image_dir, height, width):
     print('test label shape: ', test_labels.shape)
 
     return (train_data, np.asarray(train_labels)), (val_data, np.asarray(val_labels)), (
-    test_data, np.asarray(test_labels))
+        test_data, np.asarray(test_labels))
 
 
 # TODO: save train log, return performance result
@@ -242,18 +252,16 @@ def _try():
     model, num_base_layers = declare_model(num_classes, architecture, model_info)
     model = set_model_trainable(model, num_base_layers, -1)
 
-
     # img_rows, img_cols = 224, 224 # Resolution of inputs
     # channel = 3
     # num_classes = 10
     batch_size = 16
-    nb_epoch = 2
+    nb_epoch = 5
     # X_train, Y_train, X_val, Y_val = load_cifar10_data(img_rows, img_cols)
     (X_train, Y_train), (X_val, Y_val), (X_test, Y_test) = get_np_data(pool,
                                                                        "/mnt/6B7855B538947C4E/Dataset/JPEG_data/Hela_JPEG",
-                                                                       model_info['input_height'],
-                                                                       model_info['input_width'])
-    optimizer = optimizers.SGD(lr=0.1, decay=0.9)
+                                                                       model_info)
+    optimizer = optimizers.SGD(lr=0.01, decay=1e-6)
 
     # # TODO: fix that
     model.compile(loss="categorical_crossentropy", optimizer=optimizer,
