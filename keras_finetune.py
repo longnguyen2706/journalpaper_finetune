@@ -1,4 +1,3 @@
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -10,37 +9,41 @@ from keras import backend as K
 
 from split_data import print_split_report
 from utils import *
-from data_generator import get_generators
 from nets.googlenet import *
 from nets.alexnet import *
+from load_cifar10 import load_cifar10_data
+from keras.utils import np_utils
 
 
 def create_model_info(architecture):
     model_info = {}
     if architecture == 'alexnet':
-        model_info['bottleneck_tensor_size'] = 2048
-        model_info['input_width'] = 299
-        model_info['input_height'] = 299
+        model_info['bottleneck_tensor_size'] = 4096
+        model_info['input_width'] = 227
+        model_info['input_height'] = 227
         model_info['input_depth'] = 3
-        model_info['pretrained_weights'] = '/mnt/6B7855B538947C4E/pretrained_model/keras/resnet152_weights_tf.h5'
+        model_info['pretrained_weights'] = "/mnt/6B7855B538947C4E/deeplearning/pretrained_weights/alexnet_weights.h5"
 
     elif architecture == 'googlenet':
         model_info['bottleneck_tensor_size'] = 1024
         model_info['input_width'] = 224
         model_info['input_height'] = 224
         model_info['input_depth'] = 3
-        model_info['pretrained_weights'] = '/mnt/6B7855B538947C4E/pretrained_model/keras/resnet152_weights_tf.h5'
+        model_info['pretrained_weights'] = '/mnt/6B7855B538947C4E/deeplearning/pretrained_weights/googlenet_weights.h5'
 
     else:
         raise Exception
     return model_info
 
+
 def my_init(shape, name=None):
     return initializations.normal(shape, scale=0.01, name=name)
+
+
 def declare_model(num_classes, architecture, model_info, dropout=0):
     if architecture == 'alexnet':
-        p_model, base_model= AlexNet(model_info['pretrained_weights'])
-        print (p_model.summary())
+        p_model, base_model = AlexNet(model_info['pretrained_weights'])
+        print(p_model.summary())
         print(base_model.summary())
 
     elif architecture == 'googlenet':
@@ -48,18 +51,17 @@ def declare_model(num_classes, architecture, model_info, dropout=0):
         print(p_model.summary())
         print(base_model.summary())
 
-
     num_base_layers = len(base_model.layers)
 
     input = base_model.input
     x = base_model.output
 
     x = Dropout(dropout)(x)
-    predictions = Dense(num_classes, input_shape=(model_info['bottleneck_tensor_size'],), activation='softmax')(x)
-    model = Model(input=input, outputs=predictions)
+    predictions = Dense(num_classes, input_dim=(model_info['bottleneck_tensor_size']), activation='softmax',
+                        name='dense_finetune')(x)
+    model = Model(input=input, output=predictions)
 
     return model, num_base_layers
-
 
 
 def set_model_trainable(model, num_base_layers, num_of_last_layer_finetune):
@@ -73,26 +75,39 @@ def set_model_trainable(model, num_base_layers, num_of_last_layer_finetune):
         for layer in model.layers[(num_base_layers - num_of_last_layer_finetune):]:
             layer.trainable = True
 
-    # print(model.summary())
+    print(model.summary())
     return model
 
 
-# def get_np_data(split, image_dir):
-#     train_images = split['train_files']
-#     train_labels = split['train_labels']
-#
-#     val_images = split['val_files']
-#     val_labels = split['val_labels']
-#
-#     test_images = split['test_files']
-#     test_labels = split['test_labels']
-#     num_classes = len(split['class_names'])
-#
-#     train_data = prepare_numpy_data_arr(image_dir, train_images)
-#     val_data = prepare_numpy_data_arr(image_dir, val_images)
-#     test_data = prepare_numpy_data_arr(image_dir, test_images)
-#
-#     return train_data, np.asarray(train_labels), val_data, np.asarray(val_labels), test_data, np.asarray(test_labels)
+def get_np_data(split, image_dir, height, width):
+    train_images = split['train_files']
+    train_labels = split['train_labels']
+
+    val_images = split['val_files']
+    val_labels = split['val_labels']
+
+    test_images = split['test_files']
+    test_labels = split['test_labels']
+    num_classes = len(split['class_names'])
+
+    train_data = prepare_numpy_data_arr(image_dir, train_images, height, width)
+    val_data = prepare_numpy_data_arr(image_dir, val_images, height, width)
+    test_data = prepare_numpy_data_arr(image_dir, test_images, height, width)
+
+    train_labels = np_utils.to_categorical(np.asarray(train_labels), num_classes)
+    val_labels = np_utils.to_categorical(np.asarray(val_labels), num_classes)
+    test_labels = np_utils.to_categorical(np.asarray(test_labels), num_classes)
+
+    print('train data shape: ', train_data.shape)
+    print('val data shape: ', val_data.shape)
+    print('test data shape: ', test_data.shape)
+
+    print('train label shape: ', train_labels.shape)
+    print('val label shape: ', val_labels.shape)
+    print('test label shape: ', test_labels.shape)
+
+    return (train_data, np.asarray(train_labels)), (val_data, np.asarray(val_labels)), (
+    test_data, np.asarray(test_labels))
 
 
 # TODO: save train log, return performance result
@@ -101,11 +116,11 @@ def set_model_trainable(model, num_base_layers, num_of_last_layer_finetune):
 # return val_score, test_score in dict form: test_score = {'acc': model accuracy, 'loss', model loss}
 def train(split, image_dir, architecture, hyper_params, log_path=None, save_model_path=None, restore_model_path=None,
           train_batch=8, test_batch=16, num_last_layer_to_finetune=-1):
-
     model_info = create_model_info(architecture)
 
-    train_generator, validation_generator, test_generator = get_generators(split, image_dir, train_batch,
-                                                                           test_batch)
+    # train_generator, validation_generator, test_generator = get_generators(split, image_dir, train_batch,
+    #                                                                        test_batch)
+    train_generator, validation_generator, test_generator = [], [], []
     num_classes = len(split['class_names'])
     train_len = len(split['train_files'])
     validation_len = len(split['val_files'])
@@ -212,10 +227,10 @@ def restore_model(model_path, hyper_params):
     return model, num_layers
 
 
-def main(_):
-    '''
-    prepare data
-    '''
+def _try():
+    architecture = 'googlenet'
+    model_info = create_model_info(architecture)
+
     data_pools = load_pickle('/home/long/Desktop/Hela_split_30_2018-12-04.pickle')
     pool = data_pools['data']['0']
     print(pool['data_name'])
@@ -223,43 +238,38 @@ def main(_):
     print_split_report('train', pool['train_report'])
     num_classes = len(pool['class_names'])
 
-    # '''
-    # Test train
-    # '''
     #
-    train_score, val_score, test_score = train(pool, '/mnt/6B7855B538947C4E/Dataset/JPEG_data/Hela_JPEG', 'alexnet',
-          {'lr': 0.1, 'lr_decay': 0, 'momentum': 0,  'nesterov': False}, save_model_path='/home/long/Desktop/keras_alexnet', train_batch=8, test_batch=16)
+    model, num_base_layers = declare_model(num_classes, architecture, model_info)
+    model = set_model_trainable(model, num_base_layers, -1)
 
 
-    # '''
-    # Test restore and eval
-    # '''
-    #
-    # hyper_params = {'lr': 0.2, 'lr_decay': 0, 'momentum': 0, 'nesterov': False}
-    # model_info = create_model_info('resnet_v2')
-    #
-    # # model, _ = restore_model('/home/ndlong95/finetune/saved_models/Hela_split_30_2018-07-19_0_resnet_v2', hyper_params)
-    # model, _ = get(model_info, num_classes)
-    # model.load_weights('/home/long/Desktop/Hela_split_30_2018-07-19_0_resnet_v2.h5', by_name=True)
-    #
-    # train_generator, validation_generator, test_generator = get_generators(model_info, pool,
-    #                                                                        '/mnt/6B7855B538947C4E/Dataset/JPEG_data/Hela_JPEG',
-    #                                                                        8,
-    #                                                                        16)
-    # train_len = len(pool['train_files'])
-    # validation_len = len(pool['val_files'])
-    # test_len = len(pool['test_files'])
-    # train_score = model.evaluate_generator(train_generator, train_len // 8 + 1)
-    # train_score = {'loss': train_score[0], 'acc': train_score[1]}
-    # print('train_score: ', train_score)
-    #
-    # val_score = model.evaluate_generator(validation_generator, validation_len // 16 + 1)
-    # val_score = {'loss': val_score[0], 'acc': val_score[1]}
-    # print('val_score: ', val_score)
-    #
-    # test_score = model.evaluate_generator(test_generator, test_len // 16 + 1)
-    # test_score = {'loss': test_score[0], 'acc': test_score[1]}
-    # print('test score: ', test_score)
+    # img_rows, img_cols = 224, 224 # Resolution of inputs
+    # channel = 3
+    # num_classes = 10
+    batch_size = 16
+    nb_epoch = 2
+    # X_train, Y_train, X_val, Y_val = load_cifar10_data(img_rows, img_cols)
+    (X_train, Y_train), (X_val, Y_val), (X_test, Y_test) = get_np_data(pool,
+                                                                       "/mnt/6B7855B538947C4E/Dataset/JPEG_data/Hela_JPEG",
+                                                                       model_info['input_height'],
+                                                                       model_info['input_width'])
+    optimizer = optimizers.SGD(lr=0.1, decay=0.9)
+
+    # # TODO: fix that
+    model.compile(loss="categorical_crossentropy", optimizer=optimizer,
+                  metrics=['accuracy'])  # cal accuracy and loss of the model; result will be a dict
+
+    model.fit(X_train, Y_train,
+              batch_size=batch_size,
+              nb_epoch=nb_epoch,
+              shuffle=True,
+              verbose=1,
+              validation_data=(X_val, Y_val),
+              )
+
+
+def main():
+    _try()
 
 
 if __name__ == '__main__':
