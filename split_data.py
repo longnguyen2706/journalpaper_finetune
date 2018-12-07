@@ -138,7 +138,7 @@ def gen_data_pool(dataset_name, dataset_dir, path, test_size=0.2, val_size=0.25,
 
 def main():
     # need to change dir to your appropriate dir
-    pool, filepath = gen_data_pool('Hela', '/mnt/6B7855B538947C4E/Dataset/JPEG_data/Hela_JPEG', '/home/long/Desktop/')
+    pool, filepath = gen_data_pool('Hela', '/home/duclong002/Dataset/JPEG_data/Hela_JPEG', '/home/duclong002/Desktop/')
     print (filepath)
 
     # test the result
