@@ -29,6 +29,21 @@ Edit YOUR_USER_FOLDER/.keras/keras.json
     "image_dim_ordering": "th"
 }
 ```
+## Run 
+### Local 
+```commandline
+PYTHONPATH='.' python3 finetune_master.py \
+    --pool_dir  '/home/long/Desktop/Hela_split_30_2018-12-04.pickle' \
+    --image_dir  '/mnt/6B7855B538947C4E/Dataset/JPEG_data/Hela_JPEG' \
+    --architecture 'alexnet' \
+    --start_pool  0 \
+    --end_pool 0 \
+    --log_dir '/home/long/finetune/log' \
+    --save_model_dir  '/home/long/finetune/saved_models' \
+    --result_dir '/home/long/finetune/results' \
+    --train_batch  16 \
+    --test_batch  32 >>/home/long/Desktop/finetune_log.txt
+```
 
 ## Reference 
 ### Alexnet 

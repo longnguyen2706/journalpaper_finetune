@@ -13,7 +13,7 @@ from split_data import print_split_report
 from utils import current_date, current_time, load_pickle, dump_pickle
 
 sgd_hyper_params = {
-    'learning_rates':[0.05, 0.1], #[0.05, 0.1, 0.15, 0.2, 0.25],
+    'learning_rates':[0.01], #[0.05, 0.1, 0.15, 0.2, 0.25],
     'lr_decays': [0, 1e-6], #[0, 1e-3, 1e-6],
     'momentums':[0.9], #[0.8, 0.9],
     'nesterovs' : [False]#[True, False]
@@ -85,6 +85,7 @@ def train_single_pool(pool_split, image_dir, log_path, architecture, save_model_
     record result to .pickle file 
 '''
 def train_pools(_):
+    print(FLAGS)
     pools= load_pickle(FLAGS.pool_dir)
     start_pool_idx = int(FLAGS.start_pool)
     end_pool_idx = int(FLAGS.end_pool)
@@ -187,6 +188,5 @@ if __name__ == '__main__':
     )
 
     FLAGS, unparsed = parser.parse_known_args()
-    print(FLAGS)
-    tf.app.run(main=train_pools, argv=[sys.argv[0]] + unparsed)
+    train_pools([sys.argv[0]] + unparsed)
 

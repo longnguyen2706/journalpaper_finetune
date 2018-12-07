@@ -22,7 +22,7 @@ def create_model_info(architecture):
         model_info['input_depth'] = 3
         model_info['input_mean'] = 128
         model_info['input_std'] = 128
-        model_info['pretrained_weights'] = "/home/duclong002/pretrained_model/keras/alexnet_weights.h5"
+        model_info['pretrained_weights'] =  "/mnt/6B7855B538947C4E/deeplearning/pretrained_weights/alexnet_weights.h5"
 
     elif architecture == 'googlenet':
         model_info['bottleneck_tensor_size'] = 1024
@@ -31,7 +31,7 @@ def create_model_info(architecture):
         model_info['input_depth'] = 3
         model_info['input_mean'] = 128
         model_info['input_std'] = 128
-        model_info['pretrained_weights'] = '/home/duclong002/pretrained_model/keras/googlenet_weights.h5'
+        model_info['pretrained_weights'] = '/mnt/6B7855B538947C4E/deeplearning/pretrained_weights/googlenet_weights.h5'
 
     else:
         raise Exception
@@ -122,17 +122,13 @@ def get_np_data(split, image_dir, model_info):
 # TODO: retrain some layers with small learning rate after finetuning -> can do it later by restoring and train few last layers
 # TODO: export to pb file
 # return val_score, test_score in dict form: test_score = {'acc': model accuracy, 'loss', model loss}
-def train(split, image_dir, architecture, hyper_params, log_path=None, save_model_path=None, restore_model_path=None,
-          train_batch=8, test_batch=16, num_last_layer_to_finetune=-1):
+def train(pool, image_dir, architecture, hyper_params, log_path=None, save_model_path=None, restore_model_path=None,
+          train_batch=16, test_batch=32, num_last_layer_to_finetune=-1):
     model_info = create_model_info(architecture)
-
-    # train_generator, validation_generator, test_generator = get_generators(split, image_dir, train_batch,
-    #                                                                        test_batch)
-    train_generator, validation_generator, test_generator = [], [], []
-    num_classes = len(split['class_names'])
-    train_len = len(split['train_files'])
-    validation_len = len(split['val_files'])
-    test_len = len(split['test_files'])
+    print(pool['data_name'])
+    print(len(pool['train_files']))
+    print_split_report('train', pool['train_report'])
+    num_classes = len(pool['class_names'])
 
     # train the model from scratch or train the model from some point
     if restore_model_path == None:
@@ -145,46 +141,35 @@ def train(split, image_dir, architecture, hyper_params, log_path=None, save_mode
     print('training the model with hyper params: ', hyper_params)
     optimizer = optimizers.SGD(lr=hyper_params['lr'], decay=hyper_params['lr_decay'],
                                momentum=hyper_params['momentum'], nesterov=hyper_params['nesterov'])  # Inception
-    # optimizer = optimizers.SGD(lr=0.1, decay=1e-6, momentum=0.0, nesterov=False)  # Inception-Resnet
-    # optimizer = optimizers.Adam(lr=0.1, beta_1=0.9, beta_2=0.99)
-    # optimizer = optimizers.Adagrad(lr=0.01, epsilon=None, decay=0.0)
 
-    # TODO: fix that
+    (X_train, Y_train), (X_val, Y_val), (X_test, Y_test) = get_np_data(pool,image_dir,model_info)
+
+    early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.001, patience=5, verbose=0,
+                                   mode='auto')
+    # # TODO: fix that
     model.compile(loss="categorical_crossentropy", optimizer=optimizer,
                   metrics=['accuracy'])  # cal accuracy and loss of the model; result will be a dict
 
-    '''
-    Train the model 
-    '''
-    # note that keras 2 have problems with sample_per_epochs -> need to use sample per epoch
-    # see https://github.com/keras-team/keras/issues/5818
-    early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.001, patience=5, verbose=0,
-                                   mode='auto')
-    # save tensorboard log if logdir is not None
+    model.fit(X_test, Y_test,
+              batch_size=train_batch,
+              nb_epoch=1,
+              shuffle=True,
+              verbose=1,
+              validation_data=(X_val, Y_val),
+              callbacks=[early_stopping]
+              )
 
-
-    model.fit_generator(
-        train_generator,
-        epochs=100,
-        steps_per_epoch=train_len // train_batch + 1,
-        validation_data=validation_generator,
-        validation_steps=validation_len // test_batch + 1,
-        callbacks=[early_stopping],
-    )
-
-    train_score = model.evaluate_generator(train_generator, train_len // train_batch + 1)
+    train_score = model.evaluate(X_train, Y_train, test_batch)
     train_score = {'loss': train_score[0], 'acc': train_score[1]}
     print('train_score: ', train_score)
 
-    val_score = model.evaluate_generator(validation_generator, validation_len // test_batch + 1)
+    val_score =  model.evaluate(X_val, Y_val, test_batch)
     val_score = {'loss': val_score[0], 'acc': val_score[1]}
     print('val_score: ', val_score)
 
-    test_score = model.evaluate_generator(test_generator, test_len // test_batch + 1)
+    test_score = model.evaluate(X_test, Y_test, test_batch)
     test_score = {'loss': test_score[0], 'acc': test_score[1]}
     print('test score: ', test_score)
-
-    # save the model if dir is passed
     if save_model_path is not None:
         save_model(model, save_model_path)
 
@@ -192,11 +177,11 @@ def train(split, image_dir, architecture, hyper_params, log_path=None, save_mode
 
 
 def save_model(model, path):
-    # serialize model to JSON
-    model_json = model.to_json()
-    open(path + '.json', "x")  # create the file
-    with open(path + '.json', "w") as json_file:
-        json_file.write(model_json)
+    # # serialize model to JSON
+    # model_json = model.to_json()
+    # open(path + '.json', "x")  # create the file
+    # with open(path + '.json', "w") as json_file:
+    #     json_file.write(model_json)
     # serialize weights to HDF5
     model.save_weights(path + '.h5')
     print("Saved model to disk")
@@ -278,12 +263,8 @@ def _try():
               )
 
     test_score = model.evaluate(X_test, Y_test, 32)
-    # test_score = {'loss': test_score[0], 'acc': test_score[1]}
+    test_score = {'loss': test_score[0], 'acc': test_score[1]}
     print('test score: ', test_score)
-
-
-
-
 
 def main():
     _try()
