@@ -9,12 +9,25 @@
 ```
 #### Install Theano
 ```commandline
-pip install --user git+https://github.com/Theano/Theano.git
+    pip install --user git+https://github.com/Theano/Theano.git
 ```
 
 #### Install Keras v1.2 (not work with v2)
 ```
 pip install keras==1.2
+```
+
+#### Switch to theano backend 
+```
+Edit YOUR_USER_FOLDER/.keras/keras.json 
+
+{
+    "epsilon": 1e-07,
+    "image_data_format": "channels_last",
+    "floatx": "float32",
+    "backend": "theano",
+    "image_dim_ordering": "th"
+}
 ```
 
 ## Reference 
