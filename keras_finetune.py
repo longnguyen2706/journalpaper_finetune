@@ -11,7 +11,6 @@ from split_data import print_split_report
 from utils import *
 from nets.googlenet import *
 from nets.alexnet import *
-from load_cifar10 import load_cifar10_data
 from keras.utils import np_utils
 
 
