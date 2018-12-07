@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-import keras
 from keras import optimizers, metrics, initializations
 from keras.callbacks import EarlyStopping
 from keras.models import load_model, model_from_json, Model
@@ -24,7 +23,7 @@ def create_model_info(architecture):
         model_info['input_depth'] = 3
         model_info['input_mean'] = 128
         model_info['input_std'] = 128
-        model_info['pretrained_weights'] = "/mnt/6B7855B538947C4E/deeplearning/pretrained_weights/alexnet_weights.h5"
+        model_info['pretrained_weights'] = "/home/duclong002/pretrained_model/keras/alexnet_weights.h5"
 
     elif architecture == 'googlenet':
         model_info['bottleneck_tensor_size'] = 1024
@@ -33,7 +32,7 @@ def create_model_info(architecture):
         model_info['input_depth'] = 3
         model_info['input_mean'] = 128
         model_info['input_std'] = 128
-        model_info['pretrained_weights'] = '/mnt/6B7855B538947C4E/deeplearning/pretrained_weights/googlenet_weights.h5'
+        model_info['pretrained_weights'] = '/home/duclong002/pretrained_model/keras/googlenet_weights.h5'
 
     else:
         raise Exception
@@ -238,10 +237,10 @@ def restore_model(model_path, hyper_params):
 
 
 def _try():
-    architecture = 'googlenet'
+    architecture = 'alexnet'
     model_info = create_model_info(architecture)
 
-    data_pools = load_pickle('/home/long/Desktop/Hela_split_30_2018-12-04.pickle')
+    data_pools = load_pickle('/home/duclong002/Desktop/Hela_split_30_2018-12-07.pickle')
     pool = data_pools['data']['0']
     print(pool['data_name'])
     print(len(pool['train_files']))
@@ -256,16 +255,19 @@ def _try():
     # channel = 3
     # num_classes = 10
     batch_size = 16
-    nb_epoch = 5
+    nb_epoch = 50
     # X_train, Y_train, X_val, Y_val = load_cifar10_data(img_rows, img_cols)
     (X_train, Y_train), (X_val, Y_val), (X_test, Y_test) = get_np_data(pool,
-                                                                       "/mnt/6B7855B538947C4E/Dataset/JPEG_data/Hela_JPEG",
+                                                                       "/home/duclong002/Dataset/JPEG_data/Hela_JPEG",
                                                                        model_info)
     optimizer = optimizers.SGD(lr=0.01, decay=1e-6)
 
+    early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.001, patience=5, verbose=0,
+                                   mode='auto')
     # # TODO: fix that
     model.compile(loss="categorical_crossentropy", optimizer=optimizer,
                   metrics=['accuracy'])  # cal accuracy and loss of the model; result will be a dict
+
 
     model.fit(X_train, Y_train,
               batch_size=batch_size,
@@ -273,7 +275,14 @@ def _try():
               shuffle=True,
               verbose=1,
               validation_data=(X_val, Y_val),
+              callbacks=[early_stopping]
               )
+
+    test_score = model.evaluate(X_test, Y_test, 32)
+    # test_score = {'loss': test_score[0], 'acc': test_score[1]}
+    print('test score: ', test_score)
+
+
 
 
 def main():
