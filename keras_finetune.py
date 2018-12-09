@@ -80,8 +80,7 @@ def set_model_trainable(model, num_base_layers, num_of_last_layer_finetune):
     print(model.summary())
     return model
 
-
-def get_np_data(split, image_dir, model_info):
+def get_np_data(split, image_dir, model_info, is_augmented):
     train_images = split['train_files']
     train_labels = split['train_labels']
 
@@ -92,15 +91,26 @@ def get_np_data(split, image_dir, model_info):
     test_labels = split['test_labels']
     num_classes = len(split['class_names'])
 
-    train_data = prepare_numpy_data_arr(image_dir, train_images, model_info['input_height'],
-                                        model_info['input_width'], model_info['input_mean'],
-                                        model_info['input_std'])
-    val_data = prepare_numpy_data_arr(image_dir, val_images, model_info['input_height'],
-                                        model_info['input_width'], model_info['input_mean'],
-                                        model_info['input_std'])
-    test_data = prepare_numpy_data_arr(image_dir, test_images, model_info['input_height'],
-                                        model_info['input_width'], model_info['input_mean'],
-                                        model_info['input_std'])
+    if not is_augmented:
+        train_data, train_labels= prepare_image_data_arr_and_label(image_dir, train_images, model_info['input_height'],
+                                           model_info['input_width'], model_info['input_mean'],
+                                           model_info['input_std'], train_labels)
+        val_data, val_labels= prepare_image_data_arr_and_label(image_dir, val_images, model_info['input_height'],
+                                          model_info['input_width'], model_info['input_mean'],
+                                          model_info['input_std'], val_labels)
+        test_data, test_labels = prepare_image_data_arr_and_label(image_dir, test_images, model_info['input_height'],
+                                           model_info['input_width'], model_info['input_mean'],
+                                           model_info['input_std'], test_labels)
+    else:
+        train_data, train_labels = prepare_augmented_data_and_label(image_dir, train_images, model_info['input_height'],
+                                                                    model_info['input_width'], model_info['input_mean'],
+                                                                    model_info['input_std'], train_labels)
+        val_data, val_labels = prepare_augmented_data_and_label(image_dir, val_images, model_info['input_height'],
+                                                                model_info['input_width'], model_info['input_mean'],
+                                                                model_info['input_std'], val_labels)
+        test_data, test_labels = prepare_augmented_data_and_label(image_dir, test_images, model_info['input_height'],
+                                                                  model_info['input_width'], model_info['input_mean'],
+                                                                  model_info['input_std'], test_labels)
 
     train_labels = np_utils.to_categorical(np.asarray(train_labels), num_classes)
     val_labels = np_utils.to_categorical(np.asarray(val_labels), num_classes)
@@ -122,7 +132,7 @@ def get_np_data(split, image_dir, model_info):
 # TODO: retrain some layers with small learning rate after finetuning -> can do it later by restoring and train few last layers
 # TODO: export to pb file
 # return val_score, test_score in dict form: test_score = {'acc': model accuracy, 'loss', model loss}
-def train(pool, image_dir, architecture, hyper_params, log_path=None, save_model_path=None, restore_model_path=None,
+def train(pool, image_dir, architecture, hyper_params, is_augmented, log_path=None, save_model_path=None, restore_model_path=None,
           train_batch=16, test_batch=32, num_last_layer_to_finetune=-1):
     model_info = create_model_info(architecture)
     print(pool['data_name'])
@@ -142,7 +152,7 @@ def train(pool, image_dir, architecture, hyper_params, log_path=None, save_model
     optimizer = optimizers.SGD(lr=hyper_params['lr'], decay=hyper_params['lr_decay'],
                                momentum=hyper_params['momentum'], nesterov=hyper_params['nesterov'])  # Inception
 
-    (X_train, Y_train), (X_val, Y_val), (X_test, Y_test) = get_np_data(pool,image_dir,model_info)
+    (X_train, Y_train), (X_val, Y_val), (X_test, Y_test) = get_np_data(pool,image_dir,model_info, is_augmented)
 
     early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.001, patience=5, verbose=0,
                                    mode='auto')
@@ -213,7 +223,7 @@ def _try():
     architecture = 'alexnet'
     model_info = create_model_info(architecture)
 
-    data_pools = load_pickle('/home/duclong002/Desktop/Hela_split_30_2018-12-07.pickle')
+    data_pools = load_pickle('/home/long/Desktop/Hela_split_30_2018-12-04.pickle')
     pool = data_pools['data']['0']
     print(pool['data_name'])
     print(len(pool['train_files']))
@@ -221,39 +231,40 @@ def _try():
     num_classes = len(pool['class_names'])
 
     #
-    model, num_base_layers = declare_model(num_classes, architecture, model_info)
-    model = set_model_trainable(model, num_base_layers, -1)
+    # model, num_base_layers = declare_model(num_classes, architecture, model_info)
+    # model = set_model_trainable(model, num_base_layers, -1)
 
     # img_rows, img_cols = 224, 224 # Resolution of inputs
     # channel = 3
     # num_classes = 10
     batch_size = 16
     nb_epoch = 50
-    # X_train, Y_train, X_val, Y_val = load_cifar10_data(img_rows, img_cols)
+
+    is_augmented = True
     (X_train, Y_train), (X_val, Y_val), (X_test, Y_test) = get_np_data(pool,
-                                                                       "/home/duclong002/Dataset/JPEG_data/Hela_JPEG",
-                                                                       model_info)
+                                                                       "/mnt/6B7855B538947C4E/Dataset/JPEG_data/Hela_JPEG",
+                                                                       model_info, is_augmented)
     optimizer = optimizers.SGD(lr=0.01, decay=1e-6)
 
     early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.001, patience=5, verbose=0,
                                    mode='auto')
-    # # TODO: fix that
-    model.compile(loss="categorical_crossentropy", optimizer=optimizer,
-                  metrics=['accuracy'])  # cal accuracy and loss of the model; result will be a dict
-
-
-    model.fit(X_train, Y_train,
-              batch_size=batch_size,
-              nb_epoch=nb_epoch,
-              shuffle=True,
-              verbose=1,
-              validation_data=(X_val, Y_val),
-              callbacks=[early_stopping]
-              )
-
-    test_score = model.evaluate(X_test, Y_test, 32)
-    test_score = {'loss': test_score[0], 'acc': test_score[1]}
-    print('test score: ', test_score)
+    # # # TODO: fix that
+    # model.compile(loss="categorical_crossentropy", optimizer=optimizer,
+    #               metrics=['accuracy'])  # cal accuracy and loss of the model; result will be a dict
+    #
+    #
+    # model.fit(X_train, Y_train,
+    #           batch_size=batch_size,
+    #           nb_epoch=nb_epoch,
+    #           shuffle=True,
+    #           verbose=1,
+    #           validation_data=(X_val, Y_val),
+    #           callbacks=[early_stopping]
+    #           )
+    #
+    # test_score = model.evaluate(X_test, Y_test, 32)
+    # test_score = {'loss': test_score[0], 'acc': test_score[1]}
+    # print('test score: ', test_score)
 
 def main():
     _try()
