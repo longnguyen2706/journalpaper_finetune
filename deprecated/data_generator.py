@@ -46,7 +46,7 @@ class DataGenerator(kerasUtils.Sequence):
             np.random.shuffle(self.list_images)
 
     def __data_generation(self, batch_x, batch_y):
-        batch_data =  prepare_numpy_data_arr(self.image_dir, batch_x)
+        batch_data =  prepare_image_data_arr(self.image_dir, batch_x)
         return batch_data, kerasUtils.toCategorial(batch_y, num_classes=self.num_classes)
 
 

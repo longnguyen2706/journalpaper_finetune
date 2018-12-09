@@ -95,23 +95,18 @@ def get_np_data(split, image_dir, model_info, is_augmented):
         train_data, train_labels= prepare_image_data_arr_and_label(image_dir, train_images, model_info['input_height'],
                                            model_info['input_width'], model_info['input_mean'],
                                            model_info['input_std'], train_labels)
-        val_data, val_labels= prepare_image_data_arr_and_label(image_dir, val_images, model_info['input_height'],
-                                          model_info['input_width'], model_info['input_mean'],
-                                          model_info['input_std'], val_labels)
-        test_data, test_labels = prepare_image_data_arr_and_label(image_dir, test_images, model_info['input_height'],
-                                           model_info['input_width'], model_info['input_mean'],
-                                           model_info['input_std'], test_labels)
+
     else:
         train_data, train_labels = prepare_augmented_data_and_label(image_dir, train_images, model_info['input_height'],
                                                                     model_info['input_width'], model_info['input_mean'],
                                                                     model_info['input_std'], train_labels)
-        val_data, val_labels = prepare_augmented_data_and_label(image_dir, val_images, model_info['input_height'],
-                                                                model_info['input_width'], model_info['input_mean'],
-                                                                model_info['input_std'], val_labels)
-        test_data, test_labels = prepare_augmented_data_and_label(image_dir, test_images, model_info['input_height'],
-                                                                  model_info['input_width'], model_info['input_mean'],
-                                                                  model_info['input_std'], test_labels)
 
+    val_data, val_labels = prepare_image_data_arr_and_label(image_dir, val_images, model_info['input_height'],
+                                                            model_info['input_width'], model_info['input_mean'],
+                                                            model_info['input_std'], val_labels)
+    test_data, test_labels = prepare_image_data_arr_and_label(image_dir, test_images, model_info['input_height'],
+                                                              model_info['input_width'], model_info['input_mean'],
+                                                              model_info['input_std'], test_labels)
     train_labels = np_utils.to_categorical(np.asarray(train_labels), num_classes)
     val_labels = np_utils.to_categorical(np.asarray(val_labels), num_classes)
     test_labels = np_utils.to_categorical(np.asarray(test_labels), num_classes)
@@ -230,15 +225,12 @@ def _try():
     print_split_report('train', pool['train_report'])
     num_classes = len(pool['class_names'])
 
-    #
-    # model, num_base_layers = declare_model(num_classes, architecture, model_info)
-    # model = set_model_trainable(model, num_base_layers, -1)
 
-    # img_rows, img_cols = 224, 224 # Resolution of inputs
-    # channel = 3
-    # num_classes = 10
+    model, num_base_layers = declare_model(num_classes, architecture, model_info)
+    model = set_model_trainable(model, num_base_layers, -1)
+
     batch_size = 16
-    nb_epoch = 50
+    nb_epoch = 1
 
     is_augmented = True
     (X_train, Y_train), (X_val, Y_val), (X_test, Y_test) = get_np_data(pool,
@@ -249,22 +241,22 @@ def _try():
     early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.001, patience=5, verbose=0,
                                    mode='auto')
     # # # TODO: fix that
-    # model.compile(loss="categorical_crossentropy", optimizer=optimizer,
-    #               metrics=['accuracy'])  # cal accuracy and loss of the model; result will be a dict
-    #
-    #
-    # model.fit(X_train, Y_train,
-    #           batch_size=batch_size,
-    #           nb_epoch=nb_epoch,
-    #           shuffle=True,
-    #           verbose=1,
-    #           validation_data=(X_val, Y_val),
-    #           callbacks=[early_stopping]
-    #           )
-    #
-    # test_score = model.evaluate(X_test, Y_test, 32)
-    # test_score = {'loss': test_score[0], 'acc': test_score[1]}
-    # print('test score: ', test_score)
+    model.compile(loss="categorical_crossentropy", optimizer=optimizer,
+                  metrics=['accuracy'])  # cal accuracy and loss of the model; result will be a dict
+
+
+    model.fit(X_train, Y_train,
+              batch_size=batch_size,
+              nb_epoch=nb_epoch,
+              shuffle=True,
+              verbose=1,
+              validation_data=(X_val, Y_val),
+              callbacks=[early_stopping]
+              )
+
+    test_score = model.evaluate(X_test, Y_test, 32)
+    test_score = {'loss': test_score[0], 'acc': test_score[1]}
+    print('test score: ', test_score)
 
 def main():
     _try()

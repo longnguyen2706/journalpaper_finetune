@@ -31,7 +31,7 @@ The model will be train again using this params. Model will be saved as .h5 and 
 Returns:
     dict: results of all train with different hyper params and the final train result with best hyper params
 '''
-def train_single_pool(pool_split, image_dir, log_path, architecture, save_model_path, train_batch, test_batch):
+def train_single_pool(pool_split, image_dir, log_path, architecture, save_model_path, train_batch, test_batch, is_augmented):
     results = {}
     results['hyper_tuning_result'] = []
     print('architecture: ', architecture)
@@ -41,7 +41,7 @@ def train_single_pool(pool_split, image_dir, log_path, architecture, save_model_
             for momentum in sgd_hyper_params['momentums']:
                 for nesterov in sgd_hyper_params['nesterovs']:
                     hyper_params = {'lr': lr, 'lr_decay': lr_decay, 'momentum': momentum,  'nesterov': nesterov }
-                    train_score, val_score, test_score = train(pool_split, image_dir, architecture, hyper_params,
+                    train_score, val_score, test_score = train(pool_split, image_dir, architecture, hyper_params, is_augmented,
                                                   train_batch=train_batch, test_batch=test_batch)
                     result = {
                         'hyper_params': hyper_params,
@@ -68,7 +68,7 @@ def train_single_pool(pool_split, image_dir, log_path, architecture, save_model_
 
     # retrain the model with the best params and save the model to .h5 and .pb
     best_hyper_params =results['hyper_tuning_result'][best_val_acc_index]['hyper_params']
-    final_train_score, final_val_score, final_test_score = train(pool_split, image_dir, architecture, hyper_params,
+    final_train_score, final_val_score, final_test_score = train(pool_split, image_dir, architecture, hyper_params, is_augmented,
                                               save_model_path= save_model_path, log_path=log_path,
                                               train_batch=train_batch, test_batch=test_batch)
     final_result = {
@@ -113,7 +113,7 @@ def train_pools(_):
         save_model_path = os.path.join(FLAGS.save_model_dir, name+'_'+str(FLAGS.architecture))
 
         results = train_single_pool(pool, FLAGS.image_dir, log_path, FLAGS.architecture,
-                          save_model_path, FLAGS.train_batch, FLAGS.test_batch)
+                          save_model_path, FLAGS.train_batch, FLAGS.test_batch, FLAGS.is_augmented)
         model_info = {
             'hyper_param_setting':sgd_hyper_params,
             'pool_idx': str(idx),
@@ -186,7 +186,11 @@ if __name__ == '__main__':
         default=16,
         type=int
     )
-
+    parser.add_argument(
+        '--is_augmented',
+        default=False,
+        type= bool
+    )
     FLAGS, unparsed = parser.parse_known_args()
     train_pools([sys.argv[0]] + unparsed)
 

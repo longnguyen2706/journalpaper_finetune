@@ -42,7 +42,8 @@ PYTHONPATH='.' python3 finetune_master.py \
     --save_model_dir  '/home/long/finetune/saved_models' \
     --result_dir '/home/long/finetune/results' \
     --train_batch  16 \
-    --test_batch  32 >>/home/long/Desktop/finetune_log.txt
+    --test_batch  32 
+    --is_augmented True >>/home/long/Desktop/finetune_log.txt
 ```
 
 ## Reference 
