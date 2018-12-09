@@ -152,7 +152,7 @@ def train(pool, image_dir, architecture, hyper_params, log_path=None, save_model
 
     model.fit(X_test, Y_test,
               batch_size=train_batch,
-              nb_epoch=1,
+              nb_epoch=50,
               shuffle=True,
               verbose=1,
               validation_data=(X_val, Y_val),
