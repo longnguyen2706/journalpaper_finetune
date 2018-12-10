@@ -166,7 +166,8 @@ if __name__ == '__main__':
     print(pool['data_name'])
     print(len(pool['train_files']))
     num_classes = len(pool['class_names'])
-    # train_generator, val_generator, test_generator = get_generators(pool,  "/mnt/6B7855B538947C4E/Dataset/JPEG_data/Hela_JPEG", 16, 32)
+    train_generator, val_generator, test_generator = get_generators(pool,  "/mnt/6B7855B538947C4E/Dataset/JPEG_data/Hela_JPEG", 16, 32)
+    next(train_generator)
 
 
 

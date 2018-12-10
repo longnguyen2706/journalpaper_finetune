@@ -13,10 +13,10 @@ from split_data import print_split_report
 from utils import current_date, current_time, load_pickle, dump_pickle
 
 sgd_hyper_params = {
-    'learning_rates':[0.01], #[0.05, 0.1, 0.15, 0.2, 0.25],
-    'lr_decays': [0], #[0, 1e-3, 1e-6],
-    'momentums':[0], #[0.8, 0.9],
-    'nesterovs' : [False]#[True, False]
+    'learning_rates':[0.005], # u can try different values and watch. the paper use 5e-6 so u may want to try
+    'lr_decays': [0], #[0, 1e-3, 1e-6], # u can try different values here. The paper use 0
+    'momentums':[0.9], # u may try to set it either 0 or 0.9 (0.9 is what the paper used)
+    'nesterovs' : [False] # left this one False first (we might consider using nesterov later)
 }
 
 

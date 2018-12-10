@@ -1,10 +1,12 @@
 
 import pickle
+import random
 from datetime import datetime
 from PIL import Image
 import numpy as np
 import os
 import cv2
+from keras.utils import np_utils
 
 def current_date(now):
     return now.strftime('%Y-%m-%d')
@@ -142,6 +144,74 @@ def prepare_augmented_data_and_label(image_dir, image_short_path_arr, height, wi
             aug_label_arr.append(label)
 
     return np.asarray(aug_data_arr), np.asarray(aug_label_arr)
+
+import threading
+class LockedIterator(object):
+    def __init__(self, it):
+        self.lock = threading.Lock()
+        self.it = it.__iter__()
+
+    def __iter__(self): return self
+
+    def next(self):
+        self.lock.acquire()
+        try:
+            return self.it.next()
+        finally:
+            self.lock.release()
+
+    import threading
+
+class ThreadSafeGenerator:
+
+    def __init__(self, model_info, image_dir, short_image_path_arr, labels, batch_size, num_classes, is_augmented):
+        self.model_info = model_info
+        self.image_dir = image_dir
+        self.short_image_path_arr = short_image_path_arr
+        self.labels = labels
+        self.batch_size = batch_size
+        self.num_classes = num_classes
+        self.is_augmented = is_augmented
+        self.i = 0
+        self.lock = threading.Lock()
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        with self.lock:
+           return self.get_batch_data()
+
+    def get_batch_data(self):
+        i = 0
+        while True:
+            batch_short_paths = []
+            batch_labels = []
+
+            for j in range(0, self.batch_size):
+                if self.i == len(self.short_image_path_arr):
+                    self.i = 0
+                    c = list(zip(self.short_image_path_arr, self.labels))
+                    random.shuffle(c)
+                    self.short_image_path_arr, self.labels = zip(*c)
+                    print("shuffled")
+                batch_short_paths.append(self.short_image_path_arr[self.i])
+                batch_labels.append(self.labels[self.i])
+                self.i += 1
+            if self.is_augmented:
+                batch_x, batch_y = prepare_augmented_data_and_label(self.image_dir, batch_short_paths,
+                                                                    self.model_info['input_height'],
+                                                                    self.model_info['input_width'],
+                                                                    self.model_info['input_mean'],
+                                                                    self.model_info['input_std'], batch_labels)
+            else:
+                batch_x, batch_y = prepare_image_data_arr_and_label(self.image_dir, batch_short_paths,
+                                                                    self.model_info['input_height'],
+                                                                    self.model_info['input_width'],
+                                                                    self.model_info['input_mean'],
+                                                                    self.model_info['input_std'], batch_labels)
+            batch_y = np_utils.to_categorical(np.asarray(batch_y), self.num_classes)
+            return  (batch_x, batch_y)
 
 # this one is just to test whether the functions working fine
 if __name__ == "__main__":
