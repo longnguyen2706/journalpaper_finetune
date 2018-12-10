@@ -38,13 +38,26 @@ PYTHONPATH='.' python3 finetune_master.py \
     --architecture 'alexnet' \
     --start_pool  0 \
     --end_pool 0 \
-    --log_dir '/home/long/finetune/log' \
-    --save_model_dir  '/home/long/finetune/saved_models' \
-    --result_dir '/home/long/finetune/results' \
+    --log_dir '/home/long/journal_paper_finetune/log' \
+    --save_model_dir  '/home/long/journal_paper_finetune/saved_models' \
+    --result_dir '/home/long/journal_paper_finetune/results' \
     --train_batch  16 \
-    --test_batch  32 
+    --test_batch  32 \
     --is_augmented True >>/home/long/Desktop/finetune_log.txt
 ```
+### Lab computer
+PYTHONPATH='.' python3 finetune_master.py \
+    --pool_dir  '/home/duclong002/Desktop/Hela_split_30_2018-12-04.pickle' \
+    --image_dir  '/home/duclong002/Dataset/JPEG_data/Hela_JPEG' \
+    --architecture 'alexnet' \
+    --start_pool  0 \
+    --end_pool 0 \
+    --log_dir '/home/duclong002/journal_paper_finetune/log' \
+    --save_model_dir  '/home/duclong002/journal_paper_finetune/saved_models' \
+    --result_dir '/home/duclong002/journal_paper_finetune/results' \
+    --train_batch  16 \
+    --test_batch  32 \
+    --is_augmented True >>/home/duclong002/Desktop/finetune_log.txt
 
 ## Reference 
 ### Alexnet 
