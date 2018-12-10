@@ -1,11 +1,15 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+
+import random
+
 from keras import optimizers, metrics, initializations
 from keras.callbacks import EarlyStopping
 from keras.models import load_model, model_from_json, Model
 from keras import backend as K
 
+from deprecated.data_generator import get_generators
 from split_data import print_split_report
 from utils import *
 from nets.googlenet import *
@@ -22,7 +26,7 @@ def create_model_info(architecture):
         model_info['input_depth'] = 3
         model_info['input_mean'] = 128
         model_info['input_std'] = 128
-        model_info['pretrained_weights'] =  "/mnt/6B7855B538947C4E/deeplearning/pretrained_weights/alexnet_weights.h5"
+        model_info['pretrained_weights'] = "/mnt/6B7855B538947C4E/deeplearning/pretrained_weights/alexnet_weights.h5"
 
     elif architecture == 'googlenet':
         model_info['bottleneck_tensor_size'] = 1024
@@ -80,6 +84,37 @@ def set_model_trainable(model, num_base_layers, num_of_last_layer_finetune):
     print(model.summary())
     return model
 
+
+def get_batch_data(model_info, image_dir, short_image_path_arr, labels, batch_size, num_classes, is_augmented):
+    i = 0
+    while True:
+        batch_short_paths = []
+        batch_labels = []
+
+        for j in range(0, batch_size):
+            if i == len(short_image_path_arr):
+                i = 0
+                c = list(zip(short_image_path_arr, labels))
+                random.shuffle(c)
+                short_image_path_arr, labels = zip(*c)
+                print("shuffled")
+            batch_short_paths.append(short_image_path_arr[i])
+            batch_labels.append(labels[i])
+            i += 1
+        if is_augmented:
+            batch_x, batch_y = prepare_augmented_data_and_label(image_dir, batch_short_paths, model_info['input_height'],
+                                                                model_info['input_width'],
+                                                                model_info['input_mean'],
+                                                                model_info['input_std'], batch_labels)
+        else:
+            batch_x, batch_y = prepare_image_data_arr_and_label(image_dir, batch_short_paths, model_info['input_height'],
+                                                                model_info['input_width'],
+                                                                model_info['input_mean'],
+                                                                model_info['input_std'], batch_labels)
+        batch_y = np_utils.to_categorical(np.asarray(batch_y), num_classes)
+        yield (batch_x, batch_y)
+
+
 def get_np_data(split, image_dir, model_info, is_augmented):
     train_images = split['train_files']
     train_labels = split['train_labels']
@@ -92,9 +127,9 @@ def get_np_data(split, image_dir, model_info, is_augmented):
     num_classes = len(split['class_names'])
 
     if not is_augmented:
-        train_data, train_labels= prepare_image_data_arr_and_label(image_dir, train_images, model_info['input_height'],
-                                           model_info['input_width'], model_info['input_mean'],
-                                           model_info['input_std'], train_labels)
+        train_data, train_labels = prepare_image_data_arr_and_label(image_dir, train_images, model_info['input_height'],
+                                                                    model_info['input_width'], model_info['input_mean'],
+                                                                    model_info['input_std'], train_labels)
 
     else:
         train_data, train_labels = prepare_augmented_data_and_label(image_dir, train_images, model_info['input_height'],
@@ -127,13 +162,19 @@ def get_np_data(split, image_dir, model_info, is_augmented):
 # TODO: retrain some layers with small learning rate after finetuning -> can do it later by restoring and train few last layers
 # TODO: export to pb file
 # return val_score, test_score in dict form: test_score = {'acc': model accuracy, 'loss', model loss}
-def train(pool, image_dir, architecture, hyper_params, is_augmented, log_path=None, save_model_path=None, restore_model_path=None,
+def train(pool, image_dir, architecture, hyper_params, is_augmented, log_path=None, save_model_path=None,
+          restore_model_path=None,
           train_batch=16, test_batch=32, num_last_layer_to_finetune=-1):
     model_info = create_model_info(architecture)
     print(pool['data_name'])
     print(len(pool['train_files']))
     print_split_report('train', pool['train_report'])
     num_classes = len(pool['class_names'])
+    train_len = len(pool['train_files'])
+    validation_len = len(pool['val_files'])
+    test_len = len(pool['test_files'])
+    print("train, val, test len: ", train_len, validation_len, test_len)
+
 
     # train the model from scratch or train the model from some point
     if restore_model_path == None:
@@ -146,39 +187,65 @@ def train(pool, image_dir, architecture, hyper_params, is_augmented, log_path=No
     print('training the model with hyper params: ', hyper_params)
     optimizer = optimizers.SGD(lr=hyper_params['lr'], decay=hyper_params['lr_decay'],
                                momentum=hyper_params['momentum'], nesterov=hyper_params['nesterov'])  # Inception
-
-    (X_train, Y_train), (X_val, Y_val), (X_test, Y_test) = get_np_data(pool,image_dir,model_info, is_augmented)
-
     early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.001, patience=5, verbose=0,
                                    mode='auto')
-    # # TODO: fix that
     model.compile(loss="categorical_crossentropy", optimizer=optimizer,
                   metrics=['accuracy'])  # cal accuracy and loss of the model; result will be a dict
+    # (X_train, Y_train), (X_val, Y_val), (X_test, Y_test) = get_np_data(pool, image_dir, model_info, is_augmented)
+    #
+    # # # TODO: fix that
+    #
+    # model.fit(X_test, Y_test,
+    #           batch_size=train_batch,
+    #           nb_epoch=50,
+    #           shuffle=True,
+    #           verbose=1,
+    #           validation_data=(X_val, Y_val),
+    #           callbacks=[early_stopping]
+    # #           )
+    #
+    #
+    # train_score = model.evaluate(X_train, Y_train, test_batch)
+    # train_score = {'loss': train_score[0], 'acc': train_score[1]}
+    # print('train_score: ', train_score)
+    #
+    # val_score = model.evaluate(X_val, Y_val, test_batch)
+    # val_score = {'loss': val_score[0], 'acc': val_score[1]}
+    # print('val_score: ', val_score)
+    #
+    # test_score = model.evaluate(X_test, Y_test, test_batch)
+    # test_score = {'loss': test_score[0], 'acc': test_score[1]}
+    # print('test score: ', test_score)
 
-    model.fit(X_test, Y_test,
-              batch_size=train_batch,
-              nb_epoch=50,
-              shuffle=True,
-              verbose=1,
-              validation_data=(X_val, Y_val),
-              callbacks=[early_stopping]
-              )
+    train_generator = get_batch_data(model_info, image_dir, pool['train_files'], pool['train_labels'], train_batch, num_classes, False)
+    validation_generator = get_batch_data(model_info, image_dir, pool['val_files'], pool['val_labels'], test_batch, num_classes, False)
+    test_generator = get_batch_data(model_info, image_dir, pool['test_files'], pool['test_labels'], test_batch, num_classes, False)
 
-    train_score = model.evaluate(X_train, Y_train, test_batch)
+    model.fit_generator(
+        train_generator,
+        nb_epoch=50,
+        samples_per_epoch=train_len // train_batch + 1,
+        validation_data=validation_generator,
+        nb_val_samples=validation_len // test_batch + 1,
+        callbacks=[early_stopping]
+    )
+
+    train_score = model.evaluate_generator(train_generator, train_len // train_batch + 1)
     train_score = {'loss': train_score[0], 'acc': train_score[1]}
     print('train_score: ', train_score)
 
-    val_score =  model.evaluate(X_val, Y_val, test_batch)
+    val_score = model.evaluate_generator(validation_generator, validation_len // test_batch + 1)
     val_score = {'loss': val_score[0], 'acc': val_score[1]}
     print('val_score: ', val_score)
 
-    test_score = model.evaluate(X_test, Y_test, test_batch)
+    test_score = model.evaluate_generator(test_generator, test_len // test_batch + 1)
     test_score = {'loss': test_score[0], 'acc': test_score[1]}
     print('test score: ', test_score)
+
     if save_model_path is not None:
         save_model(model, save_model_path)
 
-    return train_score, val_score, test_score
+    return
 
 
 def save_model(model, path):
@@ -225,7 +292,6 @@ def _try():
     print_split_report('train', pool['train_report'])
     num_classes = len(pool['class_names'])
 
-
     model, num_base_layers = declare_model(num_classes, architecture, model_info)
     model = set_model_trainable(model, num_base_layers, -1)
 
@@ -233,9 +299,9 @@ def _try():
     nb_epoch = 1
 
     is_augmented = True
-    (X_train, Y_train), (X_val, Y_val), (X_test, Y_test) = get_np_data(pool,
-                                                                       "/mnt/6B7855B538947C4E/Dataset/JPEG_data/Hela_JPEG",
-                                                                       model_info, is_augmented)
+    # (X_train, Y_train), (X_val, Y_val), (X_test, Y_test) = get_np_data(pool,
+    #                                                                    "/mnt/6B7855B538947C4E/Dataset/JPEG_data/Hela_JPEG",
+    #                                                                    model_info, is_augmented)
     optimizer = optimizers.SGD(lr=0.01, decay=1e-6)
 
     early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.001, patience=5, verbose=0,
@@ -244,22 +310,40 @@ def _try():
     model.compile(loss="categorical_crossentropy", optimizer=optimizer,
                   metrics=['accuracy'])  # cal accuracy and loss of the model; result will be a dict
 
+    #
+    # model.fit(X_train, Y_train,
+    #           batch_size=batch_size,
+    #           nb_epoch=nb_epoch,
+    #           shuffle=True,
+    #           verbose=1,
+    #           validation_data=(X_val, Y_val),
+    #           callbacks=[early_stopping]
+    #           )
 
-    model.fit(X_train, Y_train,
-              batch_size=batch_size,
-              nb_epoch=nb_epoch,
-              shuffle=True,
-              verbose=1,
-              validation_data=(X_val, Y_val),
-              callbacks=[early_stopping]
-              )
+    # test_score = model.evaluate(X_test, Y_test, 32)
+    # test_score = {'loss': test_score[0], 'acc': test_score[1]}
+    # print('test score: ', test_score)
 
-    test_score = model.evaluate(X_test, Y_test, 32)
-    test_score = {'loss': test_score[0], 'acc': test_score[1]}
-    print('test score: ', test_score)
+
+    train_generator = get_batch_data(model_info, "/mnt/6B7855B538947C4E/Dataset/JPEG_data/Hela_JPEG", pool['train_files'], pool['train_labels'], 32, 10, True)
+
+
+def _try_generator():
+    architecture = 'alexnet'
+    model_info = create_model_info(architecture)
+    data_pools = load_pickle('/home/long/Desktop/Hela_split_30_2018-12-04.pickle')
+    pool = data_pools['data']['0']
+
+    train_generator = get_batch_data(model_info, "/mnt/6B7855B538947C4E/Dataset/JPEG_data/Hela_JPEG",
+                                     pool['train_files'], pool['train_labels'], 32, 10, False)
+    for i in range(0, 100):
+        batch_x, batch_y = next(train_generator)
+        print(batch_x.shape)
+        print(batch_y.shape)
+        print("____________________________")
 
 def main():
-    _try()
+    _try_generator()
 
 
 if __name__ == '__main__':

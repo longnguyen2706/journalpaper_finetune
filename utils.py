@@ -105,9 +105,9 @@ def crop_all_position_and_flip(image_data, w, h):
 
 
 def prepare_image_data_arr_and_label(image_dir, image_short_path_arr, height, width, mean, std, label_arr):
-    data_arr = read_images(image_dir, image_short_path_arr)
-
-    for image_data in data_arr:
+    img_data_arr = read_images(image_dir, image_short_path_arr)
+    data_arr = []
+    for image_data in img_data_arr:
         # do resize
         image_data = resize_image(image_data, width, height)
 
@@ -143,8 +143,8 @@ def prepare_augmented_data_and_label(image_dir, image_short_path_arr, height, wi
 
     return np.asarray(aug_data_arr), np.asarray(aug_label_arr)
 
+# this one is just to test whether the functions working fine
 if __name__ == "__main__":
-    # this one is just to test whether the functions working fine
     import matplotlib.pyplot as plt
     data = read_image('/home/long/Desktop/skater.jpg')
     # plt.subplot(3,1,1)
