@@ -24,7 +24,7 @@ def create_model_info(architecture):
         model_info['input_depth'] = 3
         model_info['input_mean'] = 128
         model_info['input_std'] = 128
-        model_info['pretrained_weights'] = "/mnt/6B7855B538947C4E/deeplearning/pretrained_weights/alexnet_weights.h5"
+        model_info['pretrained_weights'] =  "/home/duclong002/pretrained_model/keras/alexnet_weights.h5"
 
     elif architecture == 'googlenet':
         model_info['bottleneck_tensor_size'] = 1024
@@ -33,7 +33,7 @@ def create_model_info(architecture):
         model_info['input_depth'] = 3
         model_info['input_mean'] = 128
         model_info['input_std'] = 128
-        model_info['pretrained_weights'] = '/mnt/6B7855B538947C4E/deeplearning/pretrained_weights/googlenet_weights.h5'
+        model_info['pretrained_weights'] = '/home/duclong002/pretrained_model/keras/googlenet_weights.h5'
 
     else:
         raise Exception
@@ -231,7 +231,7 @@ def _try_fit():
     architecture = 'alexnet'
     model_info = create_model_info(architecture)
 
-    data_pools = load_pickle('/home/long/Desktop/Hela_split_30_2018-12-04.pickle')
+    data_pools = load_pickle('/home/duclong002/Desktop/Hela_split_30_2018-12-07.pickle')
     pool = data_pools['data']['0']
     print(pool['data_name'])
     print(len(pool['train_files']))
@@ -247,7 +247,7 @@ def _try_fit():
 
     is_augmented = False
     (X_train, Y_train), (X_val, Y_val), (X_test, Y_test) = get_np_data(pool,
-                                                                       "/mnt/6B7855B538947C4E/Dataset/JPEG_data/Hela_JPEG",
+                                                                       "/home/duclong002/Dataset/JPEG_data/Hela_JPEG",
                                                                        model_info, is_augmented)
     optimizer = optimizers.SGD(lr=0.01, decay=1e-6)
 
