@@ -2,11 +2,26 @@
 import pickle
 import random
 from datetime import datetime
+from time import time
+from functools import wraps
+
 from PIL import Image
 import numpy as np
 import os
 import cv2
 from keras.utils import np_utils
+
+
+def timing(f):
+    @wraps(f)
+    def wrap(*args, **kw):
+        ts = time()
+        result = f(*args, **kw)
+        te = time()
+        print('func:%r args:[%r, %r] took: %2.4f sec' % \
+          (f.__name__, args, kw, te-ts))
+        return result
+    return wrap
 
 def current_date(now):
     return now.strftime('%Y-%m-%d')

@@ -65,7 +65,7 @@ def declare_model(num_classes, architecture, model_info, dropout=0):
                         name='dense_finetune')(x)
     model = Model(input=input, output=predictions)
 
-    return model, num_base_layers
+    return model, base_model,  num_base_layers
 
 
 def set_model_trainable(model, num_base_layers, num_of_last_layer_finetune):
@@ -146,11 +146,11 @@ def train(pool, image_dir, architecture, hyper_params, is_augmented, log_path=No
     # train the model from scratch or train the model from some point
     if restore_model_path == None:
         print("training from scratch")
-        model, num_base_layers = declare_model(num_classes, architecture, model_info)
+        model, _,  num_base_layers = declare_model(num_classes, architecture, model_info)
         model = set_model_trainable(model, num_base_layers, num_last_layer_to_finetune)
     else:
         print("restoring model to train")
-        model, num_layers = restore_model(restore_model_path, hyper_params)
+        model, _ , num_layers = restore_model_weight(architecture, num_classes, restore_model_path, False, hyper_params)
         model = set_model_trainable(model, num_layers, num_last_layer_to_finetune)
 
     print('training the model with hyper params: ', hyper_params)
@@ -189,43 +189,75 @@ def train(pool, image_dir, architecture, hyper_params, is_augmented, log_path=No
     print('test score: ', test_score)
 
     if save_model_path is not None:
-        save_model(model, save_model_path)
+        save_model_weight(model, save_model_path)
 
     return train_score, val_score, test_score
 
 
-def save_model(model, path):
+def save_model_weight(model, path):
     model.save_weights(path + '.h5')
     print("Saved model to disk")
-    return
 
 
-def restore_model(model_path, hyper_params):
-    # model = load_model(model_path)
+def restore_model_weight(architecture, num_classes, model_path, freeze = True, hyper_params=None):
+    model_info = create_model_info(architecture)
+    model, base_model, num_base_layers = declare_model(num_classes, architecture, model_info)
 
-    # load json and create model
-    json_file = open(model_path + '.json', 'r')
-    loaded_model_json = json_file.read()
-    json_file.close()
-
-    model = model_from_json(loaded_model_json)
     # load weights into new model
     model.load_weights(model_path + '.h5')
     print("Loaded model from disk")
+
     num_layers = len(model.layers)
 
-    # compile model with appropriate setting
-    print('restore the model with hyper params: ', hyper_params)
-    optimizer = optimizers.SGD(lr=hyper_params['lr'], decay=hyper_params['lr_decay'],
-                               momentum=hyper_params['momentum'], nesterov=hyper_params['nesterov'])
+    if freeze:
+        model = set_model_trainable(model, num_layers, 0)
 
-    model.compile(loss="categorical_crossentropy", optimizer=optimizer,
-                  metrics=['accuracy'])
+    if hyper_params is not None:
+        # compile model with appropriate setting
+        print('restore the model with hyper params: ', hyper_params)
+
+        optimizer = optimizers.SGD(lr=hyper_params['lr'], decay=hyper_params['lr_decay'],
+                                   momentum=hyper_params['momentum'], nesterov=hyper_params['nesterov'])
+        model.compile(loss="categorical_crossentropy", optimizer=optimizer,
+                      metrics=['accuracy'])
 
     print('Restored model from path ', model_path)
     print(model.summary())
-    return model, num_layers
+    return model, num_base_layers, num_layers
 
+def extract_features(model, num_base_layers, train_data, val_data, test_data):
+    feature_layer = model.get_layer(index=num_base_layers-1)
+    print(feature_layer.get_config())
+    base_model = Model(input= model.input, output= feature_layer.output)
+    print(base_model.summary())
+
+    train_features = base_model.predict_on_batch(train_data)
+    val_features = base_model.predict_on_batch(val_data)
+    test_features = base_model.predict_on_batch(test_data)
+    print ("extracted feature shape: ", train_features.shape, val_features.shape, test_features.shape)
+
+    return train_features, val_features, test_features
+
+def save_extracted_features(dir, architecture, pool_name, index, train_features, val_features, test_features, train_labels, val_labels, test_labels):
+
+    data = {}
+    data['train_features'] = train_features
+    data['train_labels'] = train_labels
+
+    data['val_features'] = val_features
+    data['val_labels'] = val_labels
+
+    data['test_features'] = test_features
+    data['test_labels'] = test_labels
+
+    data['index'] = str(index)
+    data['architecture'] = architecture
+    data['pool_name'] = pool_name
+
+    filename = pool_name+"_"+index+"_"+architecture
+    path = os.path.join (dir, filename)
+    filepath = dump_pickle(data, path)
+    return data, filepath
 
 def _try_fit():
     architecture = 'alexnet'
@@ -289,4 +321,24 @@ def _try_generator():
 
 
 if __name__ == '__main__':
-    _try_fit()
+    model, num_base_layers,  num_layers = restore_model_weight('alexnet', 10, '/home/long/finetune/saved_models/Hela_split_30_2018-12-04_0_alexnet')
+    # feature_layer = model.get_layer('dense_2')
+    # feature_layer_weight= feature_layer.get_weights()
+    #
+    # out_weight = base_model.output.get_weights()
+    #
+    # print (feature_layer_weight == out_weight)
+
+    architecture = 'alexnet'
+    model_info = create_model_info(architecture)
+
+    data_pools = load_pickle('/home/long/Desktop/Hela_split_30_2018-12-04.pickle')
+    pool = data_pools['data']['0']
+
+    is_augmented = True
+    (X_train, Y_train), (X_val, Y_val), (X_test, Y_test) = get_np_data(pool,
+                                                                       "/mnt/6B7855B538947C4E/Dataset/JPEG_data/Hela_JPEG",
+                                                                       model_info, is_augmented)
+    train_features, val_features, test_features = extract_features(model, num_base_layers, X_train, X_val, X_test)
+    save_extracted_features("/home/long/Desktop", architecture, data_pools['pool_name'], '0', train_features, val_features, test_features, Y_train, Y_val, Y_test)
+
