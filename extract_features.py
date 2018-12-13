@@ -105,7 +105,7 @@ def get_pool_prediction(model, image_dir, pool, model_info, is_augmented):
 
 def main():
     data_pools = load_pickle('/home/long/Desktop/Hela_split_30_2018-12-04.pickle')
-    save_features_and_prediction('/home/long/Desktop', 'alexnet',
+    data, filepath = save_features_and_prediction('/home/long/Desktop', 'alexnet',
                                  '/home/long/finetune/saved_models/Hela_split_30_2018-12-04_0_alexnet',
                                  "/mnt/6B7855B538947C4E/Dataset/JPEG_data/Hela_JPEG", data_pools, '0', False)
 
