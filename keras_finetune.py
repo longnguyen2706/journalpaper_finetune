@@ -169,11 +169,11 @@ def train(pool, image_dir, architecture, hyper_params, is_augmented, log_path=No
 
     model.fit_generator(
         train_generator,
-        nb_epoch=50,
+        nb_epoch=100,
         samples_per_epoch=train_len // train_batch + 1,
         validation_data=validation_generator,
         nb_val_samples=validation_len // test_batch + 1,
-        callbacks=[]
+        callbacks=[early_stopping]
     )
 
     train_score = model.evaluate_generator(train_generator, train_len // train_batch + 1)

@@ -191,10 +191,10 @@ class ThreadSafeGenerator:
             for j in range(0, self.batch_size):
                 if self.i == len(self.short_image_path_arr):
                     self.i = 0
-                    c = list(zip(self.short_image_path_arr, self.labels))
-                    random.shuffle(c)
-                    self.short_image_path_arr, self.labels = zip(*c)
-                    print("shuffled")
+                    # c = list(zip(self.short_image_path_arr, self.labels))
+                    # random.shuffle(c)
+                    # self.short_image_path_arr, self.labels = zip(*c)
+                    # print("-------------shuffled-------------")
                 batch_short_paths.append(self.short_image_path_arr[self.i])
                 batch_labels.append(self.labels[self.i])
                 self.i += 1
