@@ -29,24 +29,43 @@ def extract_features_by_batch(model, train_data, val_data, test_data):
     return train_features, val_features, test_features
 
 
-def save_extracted_features(dir, architecture, pool_name, index, train_features, val_features, test_features,
-                            train_labels, val_labels, test_labels):
+def save_features_and_prediction(save_dir, architecture, model_path, image_dir, pools, pool_idx, is_augmented):
     data = {}
+    pool_idx = str(pool_idx)
+    pool = pools['data'][pool_idx]
+    num_classes = len(pool['class_names'])
+
+    model, num_base_layers, num_layers = restore_model_weight(architecture, num_classes, model_path)
+
+    model_info = create_model_info(architecture)
+
+    extract_model = get_extract_feature_model(model, num_base_layers)
+
+    train_prediction, val_prediction, test_prediction, train_labels, val_labels, test_labels = get_pool_prediction(
+        model, image_dir, pool, model_info, is_augmented)
+
+    train_features, val_features, test_features, _, _, _ = get_pool_prediction(extract_model, image_dir, pool,
+                                                                               model_info, is_augmented)
+
     data['train_features'] = train_features
     data['train_labels'] = train_labels
+    data['train_prediction'] = train_prediction
 
     data['val_features'] = val_features
     data['val_labels'] = val_labels
+    data['val_prediction'] = val_prediction
 
     data['test_features'] = test_features
     data['test_labels'] = test_labels
+    data['test_prediction'] = test_prediction
 
-    data['index'] = str(index)
+    data['class_names'] = pool['class_names']
+    data['index'] = pool_idx
     data['architecture'] = architecture
-    data['pool_name'] = pool_name
+    data['pool_name'] = pool['data_name']
 
-    filename = pool_name + "_" + index + "_" + architecture
-    path = os.path.join(dir, filename)
+    filename = data['pool_name'] + "_" + pool_idx + "_" + architecture
+    path = os.path.join(save_dir, filename)
     filepath = dump_pickle(data, path)
     return data, filepath
 
@@ -85,20 +104,10 @@ def get_pool_prediction(model, image_dir, pool, model_info, is_augmented):
 
 
 def main():
-    model, num_base_layers, num_layers = restore_model_weight('alexnet', 10,
-                                                              '/home/long/finetune/saved_models/Hela_split_30_2018-12-04_0_alexnet')
-    architecture = 'alexnet'
-    model_info = create_model_info(architecture)
-
     data_pools = load_pickle('/home/long/Desktop/Hela_split_30_2018-12-04.pickle')
-    pool = data_pools['data']['0']
-
-
-    extract_model = get_extract_feature_model(model, num_base_layers)
-
-    is_augmented = True
-    image_dir = "/mnt/6B7855B538947C4E/Dataset/JPEG_data/Hela_JPEG"
-    train_features, val_features, test_features, train_labels, val_labels, test_labels = get_pool_prediction(extract_model, image_dir, pool, model_info, is_augmented)
+    save_features_and_prediction('/home/long/Desktop', 'alexnet',
+                                 '/home/long/finetune/saved_models/Hela_split_30_2018-12-04_0_alexnet',
+                                 "/mnt/6B7855B538947C4E/Dataset/JPEG_data/Hela_JPEG", data_pools, '0', False)
 
 
 if __name__ == "__main__":
