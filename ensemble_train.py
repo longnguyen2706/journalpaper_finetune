@@ -18,7 +18,7 @@ import collections
 from svm_classifier import SVM_CLASSIFIER
 from utils import *
 
-IMAGE_DIR = '/mnt/6B7855B538947C4E/Dataset/JPEG_data1/Hela_JPEG'
+IMAGE_DIR = '/mnt/6B7855B538947C4E/Dataset/JPEG_data/Hela_JPEG'
 OUT_MODEL1 = '/mnt/6B7855B538947C4E/home/duclong002/handcraft_models/stage1.pkl'
 
 # PARAM_GRID = {'linearsvc__C': [1, 5, 10, 50]}
@@ -64,20 +64,18 @@ def argmax_label(encoded_data):
 def train_and_eval_svm(data):
 
     param_grid = gen_grid(HYPER_PARAMS)
-
-    data1 = load_pickle("/home/long/Desktop/Hela_0_2018-12-04_0_alexnet.pickle")
     cls1 = SVM_CLASSIFIER(param_grid, CLASSIFIER1, OUT_MODEL1)
     cls1.prepare_model()
-    cls1.train(reshape_2D(data1['train_features']), argmax_label(reshape_2D(data1['train_labels'])))
+    cls1.train(reshape_2D(data['train_features']), argmax_label(reshape_2D(data['train_labels'])))
     print("Finish train svm")
 
     print("Now eval svm on val set")
-    cls1_val = cls1.test(reshape_2D(data1['val_features']), argmax_label(reshape_2D(data1['val_labels'])), data1['class_names'])
+    cls1_val = cls1.test(reshape_2D(data['val_features']), argmax_label(reshape_2D(data['val_labels'])), data['class_names'])
     acc_val_svm = cls1_val['accuracy']
 
 
     print("Now eval stage 1 on test set")
-    cls1_test = cls1.test(reshape_2D(data1['test_features']), argmax_label(reshape_2D(data1['test_labels'])), data1['class_names'])
+    cls1_test = cls1.test(reshape_2D(data['test_features']), argmax_label(reshape_2D(data['test_labels'])), data['class_names'])
     acc_test_svm = cls1_test['accuracy']
 
     print("---------------------")
