@@ -61,10 +61,14 @@ def argmax_label(encoded_data):
         decoded_data.append(decoded_datum)
     return np.asarray(decoded_data)
 
-def train_and_eval_svm(data):
+def train_and_eval_svm(data, pca_percentage):
+
+    pca = get_PCA(pca_percentage)
+    pca.fit(reshape_2D(data['train_features']))
+    print(pca.n_components_)
 
     param_grid = gen_grid(HYPER_PARAMS)
-    cls1 = SVM_CLASSIFIER(param_grid, CLASSIFIER1, OUT_MODEL1)
+    cls1 = SVM_CLASSIFIER(param_grid, CLASSIFIER1, OUT_MODEL1, pca)
     cls1.prepare_model()
     cls1.train(reshape_2D(data['train_features']), argmax_label(reshape_2D(data['train_labels'])))
     print("Finish train svm")
@@ -82,12 +86,15 @@ def train_and_eval_svm(data):
 
     return acc_val_svm, acc_test_svm
 
+def get_PCA(percentage):
+    return PCA(n_components=percentage/100, random_state=42, svd_solver='full')
+
 def main():
     all_acc_val_svm = []
     all_acc_test_svm = []
 
     data = load_pickle("/home/long/Desktop/Hela_0_2018-12-04_0_alexnet.pickle")
-    acc_val_svm, acc_test_svm = train_and_eval_svm(data)
+    acc_val_svm, acc_test_svm = train_and_eval_svm(data, 95)
 
     all_acc_val_svm.append(acc_val_svm)
     all_acc_test_svm.append(acc_test_svm)
@@ -95,3 +102,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # pca = get_PCA(99)
+    #
+    # data = load_pickle("/home/long/Desktop/Hela_0_2018-12-04_0_alexnet.pickle")
+    # pca.fit(reshape_2D(data['train_features']))
+    # print()
