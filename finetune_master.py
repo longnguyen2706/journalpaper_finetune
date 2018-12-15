@@ -6,30 +6,30 @@ import datetime
 
 import sys
 
-from keras_finetune import train
+from keras_finetune import train_by_fit, train_by_fit_generator
 import numpy as np
 
 from split_data import print_split_report
 from utils import current_date, current_time, load_pickle, dump_pickle
 
 sgd_hyper_params = {
-    'learning_rates':[0.001], # u can try different values and watch. the paper use 5e-6 so u may want to try
-    'lr_decays': [0, 1e-6], #[0, 1e-3, 1e-6], # u can try different values here. The paper use 0
+    'learning_rates':[0.01], # u can try different values and watch. the paper use 5e-6 so u may want to try
+    'lr_decays': [0], #[0, 1e-3, 1e-6], # u can try different values here. The paper use 0
     'momentums':[0], # u may try to set it either 0 or 0.9 (0.9 is what the paper used)
     'nesterovs' : [False] # left this one False first (we might consider using nesterov later)
 }
 
 
-#TODO: flags - pickle dir, splits no to train, image_dir
+#TODO: flags - pickle dir, splits no to train_by_fit, image_dir
 FLAGS = None
 
 '''
 Train a single pool with hyper tuning
 The model will be trained multiple times with different params setting and record the result
 The best params then chosen based on val acc. 
-The model will be train again using this params. Model will be saved as .h5 and .pb file. Tensorboard log also be saved
+The model will be train_by_fit again using this params. Model will be saved as .h5 and .pb file. Tensorboard log also be saved
 Returns:
-    dict: results of all train with different hyper params and the final train result with best hyper params
+    dict: results of all train_by_fit with different hyper params and the final train_by_fit result with best hyper params
 '''
 def train_single_pool(pool_split, image_dir, log_path, architecture, save_model_path, train_batch, test_batch, is_augmented):
     results = {}
@@ -41,8 +41,8 @@ def train_single_pool(pool_split, image_dir, log_path, architecture, save_model_
             for momentum in sgd_hyper_params['momentums']:
                 for nesterov in sgd_hyper_params['nesterovs']:
                     hyper_params = {'lr': lr, 'lr_decay': lr_decay, 'momentum': momentum,  'nesterov': nesterov }
-                    train_score, val_score, test_score = train(pool_split, image_dir, architecture, hyper_params, is_augmented,
-                                                  train_batch=train_batch, test_batch=test_batch)
+                    train_score, val_score, test_score = train_by_fit(pool_split, image_dir, architecture, hyper_params, is_augmented,
+                                                                                train_batch=train_batch, test_batch=test_batch)
                     result = {
                         'hyper_params': hyper_params,
                         'train_score': train_score,
@@ -68,9 +68,9 @@ def train_single_pool(pool_split, image_dir, log_path, architecture, save_model_
 
     # retrain the model with the best params and save the model to .h5 and .pb
     best_hyper_params =results['hyper_tuning_result'][best_val_acc_index]['hyper_params']
-    final_train_score, final_val_score, final_test_score = train(pool_split, image_dir, architecture, hyper_params, is_augmented,
-                                              save_model_path= save_model_path, log_path=log_path,
-                                              train_batch=train_batch, test_batch=test_batch)
+    final_train_score, final_val_score, final_test_score = train_by_fit(pool_split, image_dir, architecture, hyper_params, is_augmented,
+                                                                                  save_model_path= save_model_path, log_path=log_path,
+                                                                                  train_batch=train_batch, test_batch=test_batch)
     final_result = {
         'hyper_params': best_hyper_params,
         'train_score': final_train_score,

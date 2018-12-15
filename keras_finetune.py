@@ -2,17 +2,14 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import random
-
-from keras import optimizers, metrics, initializations
+from keras import optimizers, initializations
 from keras.callbacks import EarlyStopping
-from keras.models import load_model, model_from_json, Model
-from keras import backend as K
+
+from nets.alexnet import *
+from nets.googlenet import *
 from split_data import print_split_report
 from utils import *
-from nets.googlenet import *
-from nets.alexnet import *
-from keras.utils import np_utils
+from utils import get_np_data
 
 
 def create_model_info(architecture):
@@ -82,56 +79,13 @@ def set_model_trainable(model, num_base_layers, num_of_last_layer_finetune):
     # print(model.summary())
     return model
 
-def get_np_data(split, image_dir, model_info, is_augmented):
-    train_images = split['train_files']
-    train_labels = split['train_labels']
-
-    val_images = split['val_files']
-    val_labels = split['val_labels']
-
-    test_images = split['test_files']
-    test_labels = split['test_labels']
-    num_classes = len(split['class_names'])
-
-    if not is_augmented:
-        train_data, train_labels = prepare_image_data_arr_and_label(image_dir, train_images, model_info['input_height'],
-                                                                    model_info['input_width'], model_info['input_mean'],
-                                                                    model_info['input_std'], train_labels)
-
-    else:
-        train_data, train_labels = prepare_augmented_data_and_label(image_dir, train_images, model_info['input_height'],
-                                                                    model_info['input_width'], model_info['input_mean'],
-                                                                    model_info['input_std'], train_labels)
-
-    val_data, val_labels = prepare_image_data_arr_and_label(image_dir, val_images, model_info['input_height'],
-                                                            model_info['input_width'], model_info['input_mean'],
-                                                            model_info['input_std'], val_labels)
-    test_data, test_labels = prepare_image_data_arr_and_label(image_dir, test_images, model_info['input_height'],
-                                                              model_info['input_width'], model_info['input_mean'],
-                                                              model_info['input_std'], test_labels)
-    train_labels = np_utils.to_categorical(np.asarray(train_labels), num_classes)
-    val_labels = np_utils.to_categorical(np.asarray(val_labels), num_classes)
-    test_labels = np_utils.to_categorical(np.asarray(test_labels), num_classes)
-
-    print('train data shape: ', train_data.shape)
-    print('val data shape: ', val_data.shape)
-    print('test data shape: ', test_data.shape)
-
-    print('train label shape: ', train_labels.shape)
-    print('val label shape: ', val_labels.shape)
-    print('test label shape: ', test_labels.shape)
-
-    return (train_data, np.asarray(train_labels)), (val_data, np.asarray(val_labels)), (
-        test_data, np.asarray(test_labels))
-
-
 # TODO: save train log, return performance result
 # TODO: retrain some layers with small learning rate after finetuning -> can do it later by restoring and train few last layers
 # TODO: export to pb file
 # return val_score, test_score in dict form: test_score = {'acc': model accuracy, 'loss', model loss}
-def train(pool, image_dir, architecture, hyper_params, is_augmented, log_path=None, save_model_path=None,
-          restore_model_path=None,
-          train_batch=16, test_batch=32, num_last_layer_to_finetune=-1):
+def train_by_fit_generator(pool, image_dir, architecture, hyper_params, is_augmented, log_path=None, save_model_path=None,
+                           restore_model_path=None,
+                           train_batch=16, test_batch=32, num_last_layer_to_finetune=-1):
     model_info = create_model_info(architecture)
     print(pool['data_name'])
     print(len(pool['train_files']))
@@ -140,17 +94,17 @@ def train(pool, image_dir, architecture, hyper_params, is_augmented, log_path=No
     train_len = len(pool['train_files'])
     validation_len = len(pool['val_files'])
     test_len = len(pool['test_files'])
-    print("train, val, test len: ", train_len, validation_len, test_len)
+    print("train val, test len: ", train_len, validation_len, test_len)
 
 
-    # train the model from scratch or train the model from some point
+    # trainr the model from scratch or train the model from some point
     if restore_model_path == None:
         print("training from scratch")
         model, num_base_layers = declare_model(num_classes, architecture, model_info)
         model = set_model_trainable(model, num_base_layers, num_last_layer_to_finetune)
     else:
         print("restoring model to train")
-        model, num_layers = restore_model(restore_model_path, hyper_params)
+        model, _ , num_layers = restore_model_weight(architecture, num_classes, restore_model_path, False, hyper_params)
         model = set_model_trainable(model, num_layers, num_last_layer_to_finetune)
 
     print('training the model with hyper params: ', hyper_params)
@@ -189,43 +143,102 @@ def train(pool, image_dir, architecture, hyper_params, is_augmented, log_path=No
     print('test score: ', test_score)
 
     if save_model_path is not None:
-        save_model(model, save_model_path)
+        save_model_weight(model, save_model_path)
 
     return train_score, val_score, test_score
 
 
-def save_model(model, path):
+def train_by_fit(pool, image_dir, architecture, hyper_params, is_augmented, log_path=None, save_model_path=None,
+                           restore_model_path=None,
+                           train_batch=16, test_batch=32, num_last_layer_to_finetune=-1):
+    model_info = create_model_info(architecture)
+    print(pool['data_name'])
+    print(len(pool['train_files']))
+    print_split_report('train', pool['train_report'])
+    num_classes = len(pool['class_names'])
+    train_len = len(pool['train_files'])
+    validation_len = len(pool['val_files'])
+    test_len = len(pool['test_files'])
+    print("train, val, test len: ", train_len, validation_len, test_len)
+
+    # train the model from scratch or train_by_fit_generator the model from some point
+    if restore_model_path == None:
+        print("training from scratch")
+        model, num_base_layers = declare_model(num_classes, architecture, model_info)
+        model = set_model_trainable(model, num_base_layers, num_last_layer_to_finetune)
+    else:
+        print("restoring model to train")
+        model, _, num_layers = restore_model_weight(architecture, num_classes, restore_model_path, False, hyper_params)
+        model = set_model_trainable(model, num_layers, num_last_layer_to_finetune)
+
+    print('training the model with hyper params: ', hyper_params)
+    optimizer = optimizers.SGD(lr=hyper_params['lr'], decay=hyper_params['lr_decay'],
+                               momentum=hyper_params['momentum'], nesterov=hyper_params['nesterov'])  # Inception
+    early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.001, patience=5, verbose=0,
+                                   mode='auto')
+    model.compile(loss="categorical_crossentropy", optimizer=optimizer,
+                  metrics=['accuracy'])  # cal accuracy and loss of the model; result will be a dict
+
+
+    (X_train, Y_train), (X_val, Y_val), (X_test, Y_test) = get_np_data(pool,
+                                                                      image_dir,
+                                                                       model_info, is_augmented)
+    model.fit(X_train, Y_train,
+              batch_size=train_batch,
+              nb_epoch=50,
+              shuffle=True,
+              verbose=1,
+              validation_data=(X_val, Y_val),
+              callbacks=[early_stopping]
+              )
+
+    train_score = model.evaluate(X_train, Y_train, test_batch)
+    train_score = {'loss': train_score[0], 'acc': train_score[1]}
+    print('train score: ', train_score)
+
+    val_score = model.evaluate(X_val, Y_val,test_batch)
+    val_score = {'loss': val_score[0], 'acc': val_score[1]}
+    print('val score: ', val_score)
+
+    test_score = model.evaluate(X_test, Y_test,test_batch)
+    test_score = {'loss': test_score[0], 'acc': test_score[1]}
+    print('test score: ', test_score)
+    if save_model_path is not None:
+        save_model_weight(model, save_model_path)
+
+    return train_score, val_score, test_score
+
+
+def save_model_weight(model, path):
     model.save_weights(path + '.h5')
     print("Saved model to disk")
-    return
 
 
-def restore_model(model_path, hyper_params):
-    # model = load_model(model_path)
+def restore_model_weight(architecture, num_classes, model_path, freeze = True, hyper_params=None):
+    model_info = create_model_info(architecture)
+    model, num_base_layers = declare_model(num_classes, architecture, model_info)
 
-    # load json and create model
-    json_file = open(model_path + '.json', 'r')
-    loaded_model_json = json_file.read()
-    json_file.close()
-
-    model = model_from_json(loaded_model_json)
     # load weights into new model
     model.load_weights(model_path + '.h5')
     print("Loaded model from disk")
+
     num_layers = len(model.layers)
 
-    # compile model with appropriate setting
-    print('restore the model with hyper params: ', hyper_params)
-    optimizer = optimizers.SGD(lr=hyper_params['lr'], decay=hyper_params['lr_decay'],
-                               momentum=hyper_params['momentum'], nesterov=hyper_params['nesterov'])
+    if freeze:
+        model = set_model_trainable(model, num_layers, 0)
 
-    model.compile(loss="categorical_crossentropy", optimizer=optimizer,
-                  metrics=['accuracy'])
+    if hyper_params is not None:
+        # compile model with appropriate setting
+        print('restore the model with hyper params: ', hyper_params)
+
+        optimizer = optimizers.SGD(lr=hyper_params['lr'], decay=hyper_params['lr_decay'],
+                                   momentum=hyper_params['momentum'], nesterov=hyper_params['nesterov'])
+        model.compile(loss="categorical_crossentropy", optimizer=optimizer,
+                      metrics=['accuracy'])
 
     print('Restored model from path ', model_path)
     print(model.summary())
-    return model, num_layers
-
+    return model, num_base_layers, num_layers
 
 def _try_fit():
     architecture = 'googlenet'

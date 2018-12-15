@@ -2,11 +2,27 @@
 import pickle
 import random
 from datetime import datetime
+from time import time
+from functools import wraps
+
+import numpy
 from PIL import Image
 import numpy as np
 import os
 import cv2
 from keras.utils import np_utils
+import threading
+
+def timing(f):
+    @wraps(f)
+    def wrap(*args, **kw):
+        ts = time()
+        result = f(*args, **kw)
+        te = time()
+        print('func:%r args:[%r, %r] took: %2.4f sec' % \
+          (f.__name__, args, kw, te-ts))
+        return result
+    return wrap
 
 def current_date(now):
     return now.strftime('%Y-%m-%d')
@@ -145,23 +161,6 @@ def prepare_augmented_data_and_label(image_dir, image_short_path_arr, height, wi
 
     return np.asarray(aug_data_arr), np.asarray(aug_label_arr)
 
-import threading
-class LockedIterator(object):
-    def __init__(self, it):
-        self.lock = threading.Lock()
-        self.it = it.__iter__()
-
-    def __iter__(self): return self
-
-    def next(self):
-        self.lock.acquire()
-        try:
-            return self.it.next()
-        finally:
-            self.lock.release()
-
-    import threading
-
 class ThreadSafeGenerator:
 
     def __init__(self, model_info, image_dir, short_image_path_arr, labels, batch_size, num_classes, is_augmented):
@@ -183,7 +182,6 @@ class ThreadSafeGenerator:
            return self.get_batch_data()
 
     def get_batch_data(self):
-        i = 0
         while True:
             batch_short_paths = []
             batch_labels = []
@@ -195,6 +193,7 @@ class ThreadSafeGenerator:
                     # random.shuffle(c)
                     # self.short_image_path_arr, self.labels = zip(*c)
                     # print("-------------shuffled-------------")
+
                 batch_short_paths.append(self.short_image_path_arr[self.i])
                 batch_labels.append(self.labels[self.i])
                 self.i += 1
@@ -213,23 +212,87 @@ class ThreadSafeGenerator:
             batch_y = np_utils.to_categorical(np.asarray(batch_y), self.num_classes)
             return  (batch_x, batch_y)
 
+def get_np_data(split, image_dir, model_info, is_augmented):
+    train_images = split['train_files']
+    train_labels = split['train_labels']
+
+    val_images = split['val_files']
+    val_labels = split['val_labels']
+
+    test_images = split['test_files']
+    test_labels = split['test_labels']
+    num_classes = len(split['class_names'])
+
+    if not is_augmented:
+        train_data, train_labels = prepare_image_data_arr_and_label(image_dir, train_images,
+                                                                    model_info['input_height'],
+                                                                    model_info['input_width'],
+                                                                    model_info['input_mean'],
+                                                                    model_info['input_std'], train_labels)
+
+    else:
+        train_data, train_labels = prepare_augmented_data_and_label(image_dir, train_images,
+                                                                    model_info['input_height'],
+                                                                    model_info['input_width'],
+                                                                    model_info['input_mean'],
+                                                                    model_info['input_std'], train_labels)
+
+    val_data, val_labels = prepare_image_data_arr_and_label(image_dir, val_images, model_info['input_height'],
+                                                            model_info['input_width'], model_info['input_mean'],
+                                                            model_info['input_std'], val_labels)
+    test_data, test_labels = prepare_image_data_arr_and_label(image_dir, test_images,
+                                                              model_info['input_height'],
+                                                              model_info['input_width'],
+                                                              model_info['input_mean'],
+                                                              model_info['input_std'], test_labels)
+    train_labels = np_utils.to_categorical(np.asarray(train_labels), num_classes)
+    val_labels = np_utils.to_categorical(np.asarray(val_labels), num_classes)
+    test_labels = np_utils.to_categorical(np.asarray(test_labels), num_classes)
+
+    print('train data shape: ', train_data.shape)
+    print('val data shape: ', val_data.shape)
+    print('test data shape: ', test_data.shape)
+
+    print('train label shape: ', train_labels.shape)
+    print('val label shape: ', val_labels.shape)
+    print('test label shape: ', test_labels.shape)
+
+    return (train_data, np.asarray(train_labels)), (val_data, np.asarray(val_labels)), (
+        test_data, np.asarray(test_labels))
+
+
 # this one is just to test whether the functions working fine
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    data = read_image('/home/long/Desktop/skater.jpg')
-    # plt.subplot(3,1,1)
-    # plt.imshow(np.asarray(data, dtype='uint8'))
-    #
+    data = read_image('/home/long/Desktop/hela.jpg')
+    if (len(data.shape) == 2):
+        data = np.stack((data,) * 3, axis=-1)
+
+    plt.subplot(3,1,1)
+    plt.imshow(np.asarray(data, dtype='uint8'))
+
     # flip_data = flip_x_axis(data)
     # flip_data = np.asarray(flip_data, dtype="uint8")
     # plt.subplot(3, 1, 2)
     # plt.imshow(flip_data)
+
+    # crop_image = crop_on_position(data, 227, 227, "center")
+    # crop_image = np.asarray(crop_image, dtype="uint8")
+    # print(crop_image.shape)
+    # plt.subplot(3, 1, 2)
+    # plt.imshow(crop_image)
     #
-    # crop_image = crop_on_position(data, 501, 501, "bottom_right")
+    # crop_image = crop_on_position(data, 227, 227, "bottom_right")
     # crop_image= np.asarray(crop_image, dtype="uint8")
     # print(crop_image.shape)
     # plt.subplot(3, 1, 3)
     # plt.imshow(crop_image)
-    # plt.show()
+    resize_image = resize_image(data, 227, 227)
+    resize_image = np.asarray(resize_image, dtype="uint8")
+    plt.subplot(3,1,2)
+    plt.imshow(resize_image)
+    plt.show()
 
-    crop_all_position_and_flip(data, 500, 500)
+    # crop_all_position_and_flip(data, 500, 500)
+
+
