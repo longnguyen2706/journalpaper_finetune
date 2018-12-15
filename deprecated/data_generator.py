@@ -38,7 +38,7 @@ class Sequence(object):
 
     # Notes
 
-    `Sequence` are a safer way to do multiprocessing. This structure guarantees that the network will only train once
+    `Sequence` are a safer way to do multiprocessing. This structure guarantees that the network will only train_by_fit_generator once
      on each sample per epoch which is not the case with generators.
 
     # Examples

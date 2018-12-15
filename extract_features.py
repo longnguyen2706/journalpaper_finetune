@@ -4,7 +4,8 @@ from __future__ import print_function
 
 import random
 
-from keras_finetune import restore_model_weight, create_model_info, get_np_data
+from keras_finetune import restore_model_weight, create_model_info
+from utils import get_np_data
 from utils import *
 from nets.googlenet import *
 from nets.alexnet import *

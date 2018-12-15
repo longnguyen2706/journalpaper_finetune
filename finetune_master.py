@@ -6,7 +6,7 @@ import datetime
 
 import sys
 
-from keras_finetune import train
+from keras_finetune import train_by_fit, train_by_fit_generator
 import numpy as np
 
 from split_data import print_split_report
@@ -20,16 +20,16 @@ sgd_hyper_params = {
 }
 
 
-#TODO: flags - pickle dir, splits no to train, image_dir
+#TODO: flags - pickle dir, splits no to train_by_fit, image_dir
 FLAGS = None
 
 '''
 Train a single pool with hyper tuning
 The model will be trained multiple times with different params setting and record the result
 The best params then chosen based on val acc. 
-The model will be train again using this params. Model will be saved as .h5 and .pb file. Tensorboard log also be saved
+The model will be train_by_fit again using this params. Model will be saved as .h5 and .pb file. Tensorboard log also be saved
 Returns:
-    dict: results of all train with different hyper params and the final train result with best hyper params
+    dict: results of all train_by_fit with different hyper params and the final train_by_fit result with best hyper params
 '''
 def train_single_pool(pool_split, image_dir, log_path, architecture, save_model_path, train_batch, test_batch, is_augmented):
     results = {}
@@ -41,8 +41,8 @@ def train_single_pool(pool_split, image_dir, log_path, architecture, save_model_
             for momentum in sgd_hyper_params['momentums']:
                 for nesterov in sgd_hyper_params['nesterovs']:
                     hyper_params = {'lr': lr, 'lr_decay': lr_decay, 'momentum': momentum,  'nesterov': nesterov }
-                    train_score, val_score, test_score = train(pool_split, image_dir, architecture, hyper_params, is_augmented,
-                                                  train_batch=train_batch, test_batch=test_batch)
+                    train_score, val_score, test_score = train_by_fit(pool_split, image_dir, architecture, hyper_params, is_augmented,
+                                                                                train_batch=train_batch, test_batch=test_batch)
                     result = {
                         'hyper_params': hyper_params,
                         'train_score': train_score,
@@ -68,9 +68,9 @@ def train_single_pool(pool_split, image_dir, log_path, architecture, save_model_
 
     # retrain the model with the best params and save the model to .h5 and .pb
     best_hyper_params =results['hyper_tuning_result'][best_val_acc_index]['hyper_params']
-    final_train_score, final_val_score, final_test_score = train(pool_split, image_dir, architecture, hyper_params, is_augmented,
-                                              save_model_path= save_model_path, log_path=log_path,
-                                              train_batch=train_batch, test_batch=test_batch)
+    final_train_score, final_val_score, final_test_score = train_by_fit(pool_split, image_dir, architecture, hyper_params, is_augmented,
+                                                                                  save_model_path= save_model_path, log_path=log_path,
+                                                                                  train_batch=train_batch, test_batch=test_batch)
     final_result = {
         'hyper_params': best_hyper_params,
         'train_score': final_train_score,
