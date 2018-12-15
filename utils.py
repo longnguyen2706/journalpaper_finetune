@@ -206,10 +206,10 @@ class ThreadSafeGenerator:
             for j in range(0, self.batch_size):
                 if self.i == len(self.short_image_path_arr):
                     self.i = 0
-                    c = list(zip(self.short_image_path_arr, self.labels))
-                    random.shuffle(c)
-                    self.short_image_path_arr, self.labels = zip(*c)
-                    print("shuffled")
+                    # c = list(zip(self.short_image_path_arr, self.labels))
+                    # random.shuffle(c)
+                    # self.short_image_path_arr, self.labels = zip(*c)
+                    # print("shuffled")
                 batch_short_paths.append(self.short_image_path_arr[self.i])
                 batch_labels.append(self.labels[self.i])
                 self.i += 1
@@ -231,20 +231,33 @@ class ThreadSafeGenerator:
 # this one is just to test whether the functions working fine
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    data = read_image('/home/long/Desktop/skater.jpg')
-    # plt.subplot(3,1,1)
-    # plt.imshow(np.asarray(data, dtype='uint8'))
-    #
+    data = read_image('/home/long/Desktop/hela.jpg')
+    if (len(data.shape) == 2):
+        data = np.stack((data,) * 3, axis=-1)
+
+    plt.subplot(3,1,1)
+    plt.imshow(np.asarray(data, dtype='uint8'))
+
     # flip_data = flip_x_axis(data)
     # flip_data = np.asarray(flip_data, dtype="uint8")
     # plt.subplot(3, 1, 2)
     # plt.imshow(flip_data)
+
+    # crop_image = crop_on_position(data, 227, 227, "center")
+    # crop_image = np.asarray(crop_image, dtype="uint8")
+    # print(crop_image.shape)
+    # plt.subplot(3, 1, 2)
+    # plt.imshow(crop_image)
     #
-    # crop_image = crop_on_position(data, 501, 501, "bottom_right")
+    # crop_image = crop_on_position(data, 227, 227, "bottom_right")
     # crop_image= np.asarray(crop_image, dtype="uint8")
     # print(crop_image.shape)
     # plt.subplot(3, 1, 3)
     # plt.imshow(crop_image)
-    # plt.show()
+    resize_image = resize_image(data, 227, 227)
+    resize_image = np.asarray(resize_image, dtype="uint8")
+    plt.subplot(3,1,2)
+    plt.imshow(resize_image)
+    plt.show()
 
-    crop_all_position_and_flip(data, 500, 500)
+    # crop_all_position_and_flip(data, 500, 500)
