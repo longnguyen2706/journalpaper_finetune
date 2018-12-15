@@ -79,7 +79,7 @@ def set_model_trainable(model, num_base_layers, num_of_last_layer_finetune):
         for layer in model.layers[(num_base_layers - num_of_last_layer_finetune):]:
             layer.trainable = True
 
-    print(model.summary())
+    # print(model.summary())
     return model
 
 def get_np_data(split, image_dir, model_info, is_augmented):
@@ -173,7 +173,7 @@ def train(pool, image_dir, architecture, hyper_params, is_augmented, log_path=No
         samples_per_epoch=train_len // train_batch + 1,
         validation_data=validation_generator,
         nb_val_samples=validation_len // test_batch + 1,
-        callbacks=[early_stopping]
+        callbacks=[]
     )
 
     train_score = model.evaluate_generator(train_generator, train_len // train_batch + 1)
@@ -228,10 +228,10 @@ def restore_model(model_path, hyper_params):
 
 
 def _try_fit():
-    architecture = 'alexnet'
+    architecture = 'googlenet'
     model_info = create_model_info(architecture)
 
-    data_pools = load_pickle('/home/duclong002/Desktop/Hela_split_30_2018-12-07.pickle')
+    data_pools = load_pickle('/home/duclong002/Desktop/Hela_split_30_2018-12-04.pickle')
     pool = data_pools['data']['0']
     print(pool['data_name'])
     print(len(pool['train_files']))
@@ -276,11 +276,11 @@ def _try_fit():
 def _try_generator():
     architecture = 'alexnet'
     model_info = create_model_info(architecture)
-    data_pools = load_pickle('/home/long/Desktop/Hela_split_30_2018-12-04.pickle')
+    data_pools = load_pickle('/home/duclong002/Desktop/Hela_split_30_2018-12-04.pickle')
     pool = data_pools['data']['0']
 
-    train_generator = ThreadSafeGenerator(model_info, "/mnt/6B7855B538947C4E/Dataset/JPEG_data/Hela_JPEG",
-                                     pool['train_files'], pool['train_labels'], 32, 10, True)
+    train_generator = ThreadSafeGenerator(model_info, "/home/duclong002/Dataset/JPEG_data/Hela_JPEG",
+                                     pool['train_files'], pool['train_labels'], 32, 10, False)
     for i in range(0, 100):
         batch_x, batch_y = next(train_generator)
         print(batch_x.shape)
@@ -289,4 +289,4 @@ def _try_generator():
 
 
 if __name__ == '__main__':
-    _try_fit()
+  _try_fit()
