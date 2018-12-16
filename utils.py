@@ -260,6 +260,13 @@ def get_np_data(split, image_dir, model_info, is_augmented):
     return (train_data, np.asarray(train_labels)), (val_data, np.asarray(val_labels)), (
         test_data, np.asarray(test_labels))
 
+def cal_mean_and_std(result_arr, name):
+    mean = sum(result_arr) / float(len(result_arr))
+    std = np.std(result_arr, dtype=np.float32, ddof=1)
+    print("average  %s result" % str(name), mean)
+    print("standard dev of %s" % str(name), std)
+    print ("_________________________________________")
+    return mean, std
 
 # this one is just to test whether the functions working fine
 if __name__ == "__main__":
