@@ -4,7 +4,6 @@ from __future__ import print_function
 
 from keras import optimizers, initializations
 from keras.callbacks import EarlyStopping
-
 from nets.alexnet import *
 from nets.googlenet import *
 from split_data import print_split_report
