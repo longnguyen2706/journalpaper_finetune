@@ -11,7 +11,7 @@ from keras_finetune import train_by_fit, train_by_fit_generator
 import numpy as np
 
 from split_data import print_split_report
-from utils import current_date, current_time, load_pickle, dump_pickle
+from utils import *
 
 sgd_hyper_params = {
     'learning_rates':[0.01, 0.001], # u can try different values and watch. the paper use 5e-6 so u may want to try
@@ -26,6 +26,8 @@ FINAL_HYPER_PARAMS = {
     'momentum': 0.9,
     'nesterov': False
 }
+
+IS_FINAL = True
 
 #TODO: flags - pickle dir, splits no to train_by_fit, image_dir
 FLAGS = None
@@ -124,6 +126,8 @@ def train_pools(_):
         os.makedirs(FLAGS.result_dir)
     trained_models_info = []
 
+    all_results = []
+
     for idx in range(start_pool_idx, end_pool_idx+1):
         pool = pools['data'][str(idx)]
         print ('pool idx: ', idx)
@@ -136,9 +140,15 @@ def train_pools(_):
         name = pools['pool_name']+'_'+str(idx)
         log_path = os.path.join(FLAGS.log_dir, name, FLAGS.architecture)
         save_model_path = os.path.join(FLAGS.save_model_dir, name+'_'+str(FLAGS.architecture))
-
-        results = train_single_pool_final(pool, FLAGS.image_dir, log_path, FLAGS.architecture,
+        if not IS_FINAL:
+            results = train_single_pool(pool, FLAGS.image_dir, log_path, FLAGS.architecture,
                           save_model_path, FLAGS.train_batch, FLAGS.test_batch, FLAGS.is_augmented)
+        else:
+            results = train_single_pool_final(pool, FLAGS.image_dir, log_path, FLAGS.architecture,
+                              save_model_path, FLAGS.train_batch, FLAGS.test_batch, FLAGS.is_augmented)
+            save_features_and_prediction(FLAGS.result_dir, FLAGS.architecture,
+                                         save_model_path,
+                                         FLAGS.image_dir, pools, str(idx), False)
         model_info = {
             'hyper_param_setting':sgd_hyper_params,
             'pool_idx': str(idx),
@@ -153,13 +163,13 @@ def train_pools(_):
             'final_results': results['final_result']
         }
         trained_models_info.append(model_info)
-        save_features_and_prediction('/home/long/Desktop', FLAGS.architecture,
-                                     save_model_path,
-                                     FLAGS.image_dir, pools, str(idx), False)
+        all_results.append(results['final_result']['test_score'])
 
     # save result to .pickle
     trained_models_info_pickle_name = pools['pool_name']+'_'+str(start_pool_idx)+'_'+str(end_pool_idx)
     dump_pickle(trained_models_info, os.path.join(FLAGS.result_dir, trained_models_info_pickle_name))
+
+    cal_mean_and_std(all_results, "avg test acc")
     return trained_models_info
 
 
