@@ -2,7 +2,7 @@ import argparse
 
 import os
 
-import datetime
+from datetime import datetime
 
 import sys
 
@@ -21,7 +21,7 @@ sgd_hyper_params = {
 }
 
 FINAL_HYPER_PARAMS = {
-    'lr': 0.01,
+    'lr': 0.001,
     'lr_decay': 1e-6,
     'momentum': 0.9,
     'nesterov': False
@@ -117,7 +117,7 @@ def train_pools(_):
     start_pool_idx = int(FLAGS.start_pool)
     end_pool_idx = int(FLAGS.end_pool)
 
-    now = datetime.datetime.now()
+    now = datetime.now()
     time = current_time(now)
 
     if not os.path.exists(FLAGS.save_model_dir):
@@ -171,7 +171,6 @@ def train_pools(_):
 
     cal_mean_and_std(all_results, "avg test acc")
     return trained_models_info
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
