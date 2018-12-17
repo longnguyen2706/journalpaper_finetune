@@ -70,6 +70,17 @@ def eval_finetune(data):
 
     return val_accuracy, test_accuracy
 
+def eval_ensemble(prediction_arr, labels):
+    n, _, _ = prediction_arr.shape
+    # ensemble_prediction = np.sum(prediction_arr, axis=0)/n
+
+    for prediction in prediction_arr:
+        prediction = np_utils.to_categorical(prediction)
+
+    acc = accuracy_score(labels, ensemble_prediction)
+    print ("esemble acc: ", acc)
+    return acc
+
 def train_and_eval_svm(data, pca_percentage):
 
     pca = get_PCA(pca_percentage)
@@ -84,16 +95,12 @@ def train_and_eval_svm(data, pca_percentage):
 
     print("Now eval svm on val set")
     cls1_val = cls1.test(reshape_2D(data['val_features']), argmax_label(reshape_2D(data['val_labels'])), data['class_names'])
-    acc_val_svm = cls1_val['accuracy']
-
 
     print("Now eval stage 1 on test set")
     cls1_test = cls1.test(reshape_2D(data['test_features']), argmax_label(reshape_2D(data['test_labels'])), data['class_names'])
-    acc_test_svm = cls1_test['accuracy']
-
     print("---------------------")
 
-    return acc_val_svm, acc_test_svm
+    return cls1_val['accuracy'], cls1_test['accuracy'], cls1_val['prediction'], cls1_test['prediction']
 
 def get_PCA(percentage):
     return PCA(n_components=percentage/100, random_state=42, svd_solver='full')
@@ -111,24 +118,33 @@ def main():
     all_acc_test_svm = []
     all_acc_val_finetune =[]
     all_acc_test_finetune = []
+    all_acc_val_ensemble = []
 
     all_files = find_all_pickles("/home/duclong002/journal_paper_finetune/results/", "googlenet")
     for file in all_files:
+
         data = load_pickle(file)
+
         acc_val_finetune, acc_test_finetune = eval_finetune(data)
         all_acc_val_finetune.append(acc_val_finetune)
         all_acc_test_finetune.append(acc_test_finetune)
 
-    #     acc_val_svm, acc_test_svm = train_and_eval_svm(data, 95)
-    #
-    #     all_acc_val_svm.append(acc_val_svm)
-    #     all_acc_test_svm.append(acc_test_svm)
+        acc_val_svm, acc_test_svm, prediction_val_svm, prediction_test_svm = train_and_eval_svm(data, 95)
+        all_acc_val_svm.append(acc_val_svm)
+        all_acc_test_svm.append(acc_test_svm)
+
+        all_val_prediction = [argmax_label(reshape_2D(data['val_prediction'])), prediction_val_svm]
+        all_val_prediction = np.reshape(all_val_prediction, (len(all_val_prediction), len(prediction_val_svm)))
+
+        val_ensemble = eval_ensemble(all_val_prediction, argmax_label(reshape_2D(data['val_labels'])))
+        all_acc_val_ensemble.append(val_ensemble)
     # cal_mean_and_std(all_acc_val_svm, "val_svm")
     # cal_mean_and_std(all_acc_val_svm, "test_svm")
 
     cal_mean_and_std(all_acc_val_finetune, "val_finetune")
     cal_mean_and_std(all_acc_test_finetune, "test_finetune")
 
+    cal_mean_and_std(all_acc_val_ensemble, "val_ensemble")
 if __name__ == "__main__":
     main()
     # pca = get_PCA(99)
