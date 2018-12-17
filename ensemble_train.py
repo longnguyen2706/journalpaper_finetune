@@ -33,8 +33,6 @@ HYPER_PARAMS = [
     }
 ]
 CLASSIFIER1 = svm.LinearSVC()
-DIM_REDUCER = PCA(n_components=300, whiten=True, random_state=42,svd_solver='randomized')
-
 
 def gen_grid(hyper_params):
     params_grid ={}
@@ -60,6 +58,17 @@ def argmax_label(encoded_data):
         decoded_datum = np.argmax(encoded_data[i])
         decoded_data.append(decoded_datum)
     return np.asarray(decoded_data)
+
+def eval_finetune(data):
+    val_prediction = argmax_label(reshape_2D(data['val_prediction']))
+    val_labels = argmax_label(reshape_2D(data['val_labels']))
+    val_accuracy = accuracy_score(val_labels, val_prediction)
+
+    test_prediction = argmax_label(reshape_2D(data['test_prediction']))
+    test_labels = argmax_label(reshape_2D(data['test_labels']))
+    test_accuracy = accuracy_score(test_labels, test_prediction)
+
+    return val_accuracy, test_accuracy
 
 def train_and_eval_svm(data, pca_percentage):
 
@@ -89,16 +98,36 @@ def train_and_eval_svm(data, pca_percentage):
 def get_PCA(percentage):
     return PCA(n_components=percentage/100, random_state=42, svd_solver='full')
 
+def find_all_pickles(dir, architecture):
+    file_paths = []
+    for path in os.listdir(dir):
+        if (path.endswith(architecture + ".pickle")):
+            file_paths.append(os.path.join(dir, path))
+    print(file_paths)
+    return file_paths
+
 def main():
     all_acc_val_svm = []
     all_acc_test_svm = []
+    all_acc_val_finetune =[]
+    all_acc_test_finetune = []
 
-    data = load_pickle("/home/long/Desktop/Hela_0_2018-12-04_0_alexnet.pickle")
-    acc_val_svm, acc_test_svm = train_and_eval_svm(data, 95)
+    all_files = find_all_pickles("/home/duclong002/journal_paper_finetune/results/", "googlenet")
+    for file in all_files:
+        data = load_pickle(file)
+        acc_val_finetune, acc_test_finetune = eval_finetune(data)
+        all_acc_val_finetune.append(acc_val_finetune)
+        all_acc_test_finetune.append(acc_test_finetune)
 
-    all_acc_val_svm.append(acc_val_svm)
-    all_acc_test_svm.append(acc_test_svm)
+    #     acc_val_svm, acc_test_svm = train_and_eval_svm(data, 95)
+    #
+    #     all_acc_val_svm.append(acc_val_svm)
+    #     all_acc_test_svm.append(acc_test_svm)
+    # cal_mean_and_std(all_acc_val_svm, "val_svm")
+    # cal_mean_and_std(all_acc_val_svm, "test_svm")
 
+    cal_mean_and_std(all_acc_val_finetune, "val_finetune")
+    cal_mean_and_std(all_acc_test_finetune, "test_finetune")
 
 if __name__ == "__main__":
     main()

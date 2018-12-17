@@ -163,7 +163,7 @@ def train_pools(_):
             'final_results': results['final_result']
         }
         trained_models_info.append(model_info)
-        all_results.append(results['final_result']['test_score'])
+        all_results.append(results['final_result']['test_score']['acc'])
 
     # save result to .pickle
     trained_models_info_pickle_name = pools['pool_name']+'_'+str(start_pool_idx)+'_'+str(end_pool_idx)
