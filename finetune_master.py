@@ -20,8 +20,14 @@ sgd_hyper_params = {
     'nesterovs' : [False] # left this one False first (we might consider using nesterov later)
 }
 
+# FINAL_HYPER_PARAMS = {
+#     'lr': 0.001,
+#     'lr_decay': 1e-6,
+#     'momentum': 0.9,
+#     'nesterov': False
+# }
 FINAL_HYPER_PARAMS = {
-    'lr': 0.001,
+    'lr': 0.0025,
     'lr_decay': 1e-6,
     'momentum': 0.9,
     'nesterov': False

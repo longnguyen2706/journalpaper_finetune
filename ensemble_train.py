@@ -70,14 +70,13 @@ def eval_finetune(data):
 
     return val_accuracy, test_accuracy
 
-def eval_ensemble(prediction_arr, labels):
-    n, _, _ = prediction_arr.shape
-    # ensemble_prediction = np.sum(prediction_arr, axis=0)/n
 
-    for prediction in prediction_arr:
-        prediction = np_utils.to_categorical(prediction)
+def eval_ensemble(categorical_prediction_arr, categorial_labels):
+    ensemble_categorical_prediction = np.sum(categorical_prediction_arr, axis=0)
+    ensemble_prediction = argmax_label(ensemble_categorical_prediction)
+    print(ensemble_prediction.shape)
 
-    acc = accuracy_score(labels, ensemble_prediction)
+    acc = accuracy_score(argmax_label(categorial_labels), ensemble_prediction)
     print ("esemble acc: ", acc)
     return acc
 
@@ -119,10 +118,10 @@ def main():
     all_acc_val_finetune =[]
     all_acc_test_finetune = []
     all_acc_val_ensemble = []
+    all_acc_test_ensemble = []
 
     all_files = find_all_pickles("/home/duclong002/journal_paper_finetune/results/", "googlenet")
     for file in all_files:
-
         data = load_pickle(file)
 
         acc_val_finetune, acc_test_finetune = eval_finetune(data)
@@ -133,18 +132,23 @@ def main():
         all_acc_val_svm.append(acc_val_svm)
         all_acc_test_svm.append(acc_test_svm)
 
-        all_val_prediction = [argmax_label(reshape_2D(data['val_prediction'])), prediction_val_svm]
-        all_val_prediction = np.reshape(all_val_prediction, (len(all_val_prediction), len(prediction_val_svm)))
-
-        val_ensemble = eval_ensemble(all_val_prediction, argmax_label(reshape_2D(data['val_labels'])))
+        all_val_prediction = [reshape_2D(data['val_prediction']), np_utils.to_categorical(prediction_val_svm)]
+        val_ensemble = eval_ensemble(all_val_prediction, reshape_2D(data['val_labels']))
         all_acc_val_ensemble.append(val_ensemble)
-    # cal_mean_and_std(all_acc_val_svm, "val_svm")
-    # cal_mean_and_std(all_acc_val_svm, "test_svm")
+
+        all_test_prediction = [reshape_2D(data['test_prediction']), np_utils.to_categorical(prediction_test_svm)]
+        test_ensemble = eval_ensemble(all_test_prediction, reshape_2D(data['test_labels']))
+        all_acc_test_ensemble.append(test_ensemble)
+
+    cal_mean_and_std(all_acc_val_svm, "val_svm")
+    cal_mean_and_std(all_acc_val_svm, "test_svm")
 
     cal_mean_and_std(all_acc_val_finetune, "val_finetune")
     cal_mean_and_std(all_acc_test_finetune, "test_finetune")
 
     cal_mean_and_std(all_acc_val_ensemble, "val_ensemble")
+    cal_mean_and_std(all_acc_test_ensemble, "test_ensemble")
+
 if __name__ == "__main__":
     main()
     # pca = get_PCA(99)
