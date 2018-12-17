@@ -14,7 +14,7 @@ from split_data import print_split_report
 from utils import *
 
 sgd_hyper_params = {
-    'learning_rates':[0.01, 0.05, 0.005], # u can try different values and watch. the paper use 5e-6 so u may want to try
+    'learning_rates':[0.05,0.01, 0.005, 0.001], # u can try different values and watch. the paper use 5e-6 so u may want to try
     'lr_decays': [0, 1e-6], #[0, 1e-3, 1e-6], # u can try different values here. The paper use 0
     'momentums':[0, 0.9], # u may try to set it either 0 or 0.9 (0.9 is what the paper used)
     'nesterovs' : [False] # left this one False first (we might consider using nesterov later)
@@ -163,7 +163,7 @@ def train_pools(_):
             'final_results': results['final_result']
         }
         trained_models_info.append(model_info)
-        all_results.append(results['final_result']['test_score'])
+        all_results.append(results['final_result']['test_score']['acc'])
 
     # save result to .pickle
     trained_models_info_pickle_name = pools['pool_name']+'_'+str(start_pool_idx)+'_'+str(end_pool_idx)

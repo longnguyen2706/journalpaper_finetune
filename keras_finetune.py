@@ -20,7 +20,7 @@ def create_model_info(architecture):
         model_info['input_depth'] = 3
         model_info['input_mean'] = 128
         model_info['input_std'] = 128
-        model_info['pretrained_weights'] = "/mnt/6B7855B538947C4E/deeplearning/pretrained_weights/alexnet_weights.h5"
+        model_info['pretrained_weights'] = "/home/ndlong95/pretrained_model/keras/alexnet_weights.h5"
 
     elif architecture == 'googlenet':
         model_info['bottleneck_tensor_size'] = 1024
@@ -29,7 +29,7 @@ def create_model_info(architecture):
         model_info['input_depth'] = 3
         model_info['input_mean'] = 128
         model_info['input_std'] = 128
-        model_info['pretrained_weights'] = '/mnt/6B7855B538947C4E/deeplearning/pretrained_weights/googlenet_weights.h5'
+        model_info['pretrained_weights'] = '/home/ndlong95/pretrained_model/keras/googlenet_weights.h5'
 
     else:
         raise Exception
