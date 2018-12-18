@@ -40,7 +40,7 @@ def my_init(shape, name=None):
     return initializations.normal(shape, scale=0.01, name=name)
 
 
-def declare_model(num_classes, architecture, model_info, dropout=0):
+def declare_model(num_classes, architecture, model_info, dropout=0.5):
     if architecture == 'alexnet':
         p_model, base_model = AlexNet(model_info['pretrained_weights'])
         # print(p_model.summary())

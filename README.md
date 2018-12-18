@@ -49,7 +49,7 @@ PYTHONPATH='.' python3 finetune_master.py \
 PYTHONPATH='.' python3 finetune_master.py \
     --pool_dir  '/home/duclong002/Desktop/Hela_split_30_2018-12-04.pickle' \
     --image_dir  '/home/duclong002/Dataset/JPEG_data/Hela_JPEG' \
-    --architecture 'googlenet' \
+    --architecture 'alexnet' \
     --start_pool  0 \
     --end_pool 29 \
     --log_dir '/home/duclong002/journal_paper_finetune/log' \

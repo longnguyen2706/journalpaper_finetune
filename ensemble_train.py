@@ -18,9 +18,12 @@ import collections
 from svm_classifier import SVM_CLASSIFIER
 from utils import *
 
-IMAGE_DIR = '/mnt/6B7855B538947C4E/Dataset/JPEG_data/Hela_JPEG'
-OUT_MODEL1 = '/mnt/6B7855B538947C4E/home/duclong002/handcraft_models/stage1.pkl'
+OUT_MODEL1 = '/home/duclong002/handcraft_models/stage1.pkl'
+OUT_MODEL2 = 'home/duclong002/handcraft_models/stage2.pkl'
+OUT_MODEL3 = '/home/duclong002/handcraft_models/stage3.pkl'
 
+FEATURE_DIR = "/home/duclong002/journal_paper_finetune/results/"
+PCA_PERCENTAGE = 95
 # PARAM_GRID = {'linearsvc__C': [1, 5, 10, 50]}
 
 HYPER_PARAMS = [
@@ -80,6 +83,42 @@ def eval_ensemble(categorical_prediction_arr, categorial_labels):
     print ("esemble acc: ", acc)
     return acc
 
+def concat(feature_arr1, feature_arr2):
+    feature_concat = []
+    for i in range(0, len(feature_arr1)):
+        feature = np.concatenate(feature_arr1[i], feature_arr2[i])
+        assert(feature.shape == ((4096+1024),))
+        feature_concat.append(feature)
+
+    return np.asarray(feature_concat)
+
+def train_and_eval_single_concat(data1, data2, pca_percentage):
+    pca = get_PCA(pca_percentage)
+
+    train_features = concat(reshape_2D(data1['train_features']), reshape_2D(data2['train_features']))
+    val_features = concat(reshape_2D(data1['val_features']), reshape_2D(data2['val_features']))
+    test_features = concat(reshape_2D(data1['test_features']), reshape_2D(data2['test_features']))
+
+    pca.fit(train_features)
+    print(pca.n_components_)
+
+    param_grid = gen_grid(HYPER_PARAMS)
+    cls1 = SVM_CLASSIFIER(param_grid, CLASSIFIER1, OUT_MODEL3, pca)
+    cls1.prepare_model()
+    cls1.train(train_features, argmax_label(reshape_2D(data1['train_labels'])))
+    print("Finish train concat svm")
+
+    print("Now eval concat svm on val set")
+    cls1_val = cls1.test(val_features, argmax_label(reshape_2D(data1['val_labels'])),
+                         data1['class_names'])
+
+    print("Now eval concat svm on test set")
+    cls1_test = cls1.test(test_features, argmax_label(reshape_2D(data1['test_labels'])),
+                          data1['class_names'])
+    print("---------------------")
+
+    return cls1_val['accuracy'], cls1_test['accuracy'], cls1_val['prediction'], cls1_test['prediction']
+
 def train_and_eval_svm(data, pca_percentage):
 
     pca = get_PCA(pca_percentage)
@@ -112,42 +151,99 @@ def find_all_pickles(dir, architecture):
     print(file_paths)
     return file_paths
 
-def main():
+def train_and_eval_concats(dir, architecture1, architecture2, pca_percentage):
+    all_files1 = find_all_pickles(dir, architecture1)
+    all_files2 = find_all_pickles(dir, architecture2)
+    all_p_svm_test = []
+    all_label_test = []
     all_acc_val_svm = []
     all_acc_test_svm = []
-    all_acc_val_finetune =[]
-    all_acc_test_finetune = []
-    all_acc_val_ensemble = []
-    all_acc_test_ensemble = []
+    for i in range(0, len(all_files1)):
+        data1 = load_pickle(all_files1[i])
+        data2 = load_pickle(all_files2[i])
+        acc_val_svm, acc_test_svm, p_val_svm, p_test_svm = train_and_eval_single_concat(data1, data2, pca_percentage)
 
-    all_files = find_all_pickles("/home/duclong002/journal_paper_finetune/results/", "googlenet")
-    for file in all_files:
-        data = load_pickle(file)
-
-        acc_val_finetune, acc_test_finetune = eval_finetune(data)
-        all_acc_val_finetune.append(acc_val_finetune)
-        all_acc_test_finetune.append(acc_test_finetune)
-
-        acc_val_svm, acc_test_svm, prediction_val_svm, prediction_test_svm = train_and_eval_svm(data, 95)
         all_acc_val_svm.append(acc_val_svm)
         all_acc_test_svm.append(acc_test_svm)
-
-        all_val_prediction = [reshape_2D(data['val_prediction']), np_utils.to_categorical(prediction_val_svm)]
-        val_ensemble = eval_ensemble(all_val_prediction, reshape_2D(data['val_labels']))
-        all_acc_val_ensemble.append(val_ensemble)
-
-        all_test_prediction = [reshape_2D(data['test_prediction']), np_utils.to_categorical(prediction_test_svm)]
-        test_ensemble = eval_ensemble(all_test_prediction, reshape_2D(data['test_labels']))
-        all_acc_test_ensemble.append(test_ensemble)
+        all_p_svm_test.append( np_utils.to_categorical(p_test_svm))
+        all_label_test.append(reshape_2D(data1['test_labels']))
 
     cal_mean_and_std(all_acc_val_svm, "val_svm")
     cal_mean_and_std(all_acc_val_svm, "test_svm")
 
-    cal_mean_and_std(all_acc_val_finetune, "val_finetune")
-    cal_mean_and_std(all_acc_test_finetune, "test_finetune")
+    return all_p_svm_test, all_label_test
 
-    cal_mean_and_std(all_acc_val_ensemble, "val_ensemble")
-    cal_mean_and_std(all_acc_test_ensemble, "test_ensemble")
+def avg_svm_finetune_ensemble(dir, architecture, pca_percentage):
+
+    all_acc_val_svm1 = []
+    all_acc_test_svm1 = []
+
+    all_acc_val_finetune1 = []
+    all_acc_test_finetune1 = []
+
+    all_acc_val_ensemble1 = []
+    all_acc_test_ensemble1 = []
+
+    all_p_svm_test = []
+    all_p_finetune_test = []
+
+    all_files = find_all_pickles(dir, architecture)
+    for file in all_files:
+        data = load_pickle(file)
+        acc_val_finetune, acc_test_finetune = eval_finetune(data)
+        all_acc_val_finetune1.append(acc_val_finetune)
+        all_acc_test_finetune1.append(acc_test_finetune)
+
+        acc_val_svm, acc_test_svm, prediction_val_svm, prediction_test_svm = train_and_eval_svm(data, pca_percentage)
+        all_acc_val_svm1.append(acc_val_svm)
+        all_acc_test_svm1.append(acc_test_svm)
+
+        all_val_prediction = [reshape_2D(data['val_prediction']), np_utils.to_categorical(prediction_val_svm)]
+        val_ensemble = eval_ensemble(all_val_prediction, reshape_2D(data['val_labels']))
+        all_acc_val_ensemble1.append(val_ensemble)
+
+        all_test_prediction = [reshape_2D(data['test_prediction']), np_utils.to_categorical(prediction_test_svm)]
+        test_ensemble = eval_ensemble(all_test_prediction, reshape_2D(data['test_labels']))
+        all_acc_test_ensemble1.append(test_ensemble)
+
+        all_p_svm_test.append(np_utils.to_categorical(prediction_test_svm))
+        all_p_finetune_test.append(reshape_2D(data['test_prediction']))
+    cal_mean_and_std(all_acc_val_svm1, "val_svm")
+    cal_mean_and_std(all_acc_val_svm1, "test_svm")
+
+    cal_mean_and_std(all_acc_val_finetune1, "val_finetune")
+    cal_mean_and_std(all_acc_test_finetune1, "test_finetune")
+
+    cal_mean_and_std(all_acc_val_ensemble1, "val_ensemble")
+    cal_mean_and_std(all_acc_test_ensemble1, "test_ensemble")
+
+    return all_p_svm_test, all_p_finetune_test, all_acc_test_svm1, all_acc_val_finetune1, all_acc_test_ensemble1
+
+
+def main():
+    print ("----------------alexnet---------------------")
+    all_p_svm_test1, all_p_ft_test1, a_svm_test1, a_ft_test1, a_ensbl_test1 = avg_svm_finetune_ensemble(FEATURE_DIR, 'alexnet', PCA_PERCENTAGE)
+    print("---------------------------------------------")
+
+    print("----------------googlenet--------------------")
+    all_p_svm_test2, all_p_ft_test2, a_svm_test2, a_ft_test2, a_ensbl_test2 = avg_svm_finetune_ensemble(FEATURE_DIR, 'googlenet', PCA_PERCENTAGE)
+    print("---------------------------------------------")
+
+    print("----------------concat--------------------")
+    all_p_svm_test_c, all_label_test = train_and_eval_concats(FEATURE_DIR, 'googlenet', 'alexnet', PCA_PERCENTAGE)
+    print("---------------------------------------------")
+
+    print("----------------ensemble--------------------")
+    all_acc_test_e = []
+    for i in range(0, all_p_ft_test1):
+        pred = [all_p_ft_test1[i], all_p_ft_test2[i], all_p_svm_test1[i], all_p_svm_test2[i], all_p_svm_test_c[i]]
+        acc_test_e = eval_ensemble(pred, all_label_test[i])
+        all_acc_test_e.append(acc_test_e)
+
+    cal_mean_and_std(all_acc_test_e, "test_ensemble")
+
+
+
 
 if __name__ == "__main__":
     main()
