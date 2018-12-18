@@ -15,6 +15,7 @@ from sklearn.metrics import precision_recall_fscore_support as score
 from sklearn.utils import Bunch
 import collections
 
+import re
 from svm_classifier import SVM_CLASSIFIER
 from utils import *
 
@@ -22,7 +23,7 @@ OUT_MODEL1 = '/home/duclong002/handcraft_models/stage1.pkl'
 OUT_MODEL2 = 'home/duclong002/handcraft_models/stage2.pkl'
 OUT_MODEL3 = '/home/duclong002/handcraft_models/stage3.pkl'
 
-FEATURE_DIR = "/home/duclong002/journal_paper_finetune/results/"
+FEATURE_DIR = "/home/duclong002/journal_paper_finetune/archived_results/"
 PCA_PERCENTAGE = 95
 # PARAM_GRID = {'linearsvc__C': [1, 5, 10, 50]}
 
@@ -86,7 +87,7 @@ def eval_ensemble(categorical_prediction_arr, categorial_labels):
 def concat(feature_arr1, feature_arr2):
     feature_concat = []
     for i in range(0, len(feature_arr1)):
-        feature = np.concatenate(feature_arr1[i], feature_arr2[i])
+        feature = np.concatenate((feature_arr1[i], feature_arr2[i]))
         assert(feature.shape == ((4096+1024),))
         feature_concat.append(feature)
 
@@ -148,8 +149,9 @@ def find_all_pickles(dir, architecture):
     for path in os.listdir(dir):
         if (path.endswith(architecture + ".pickle")):
             file_paths.append(os.path.join(dir, path))
-    print(file_paths)
-    return file_paths
+    ordered_files = sorted(file_paths, key=lambda x: (int(re.sub('\D', '', x)), x))
+    print(ordered_files)
+    return ordered_files
 
 def train_and_eval_concats(dir, architecture1, architecture2, pca_percentage):
     all_files1 = find_all_pickles(dir, architecture1)
@@ -221,34 +223,29 @@ def avg_svm_finetune_ensemble(dir, architecture, pca_percentage):
 
 
 def main():
-    print ("----------------alexnet---------------------")
-    all_p_svm_test1, all_p_ft_test1, a_svm_test1, a_ft_test1, a_ensbl_test1 = avg_svm_finetune_ensemble(FEATURE_DIR, 'alexnet', PCA_PERCENTAGE)
-    print("---------------------------------------------")
-
-    print("----------------googlenet--------------------")
-    all_p_svm_test2, all_p_ft_test2, a_svm_test2, a_ft_test2, a_ensbl_test2 = avg_svm_finetune_ensemble(FEATURE_DIR, 'googlenet', PCA_PERCENTAGE)
-    print("---------------------------------------------")
+    # print ("----------------alexnet---------------------")
+    # all_p_svm_test1, all_p_ft_test1, a_svm_test1, a_ft_test1, a_ensbl_test1 = avg_svm_finetune_ensemble(FEATURE_DIR, 'alexnet', PCA_PERCENTAGE)
+    # print("---------------------------------------------")
+    #
+    # print("----------------googlenet--------------------")
+    # all_p_svm_test2, all_p_ft_test2, a_svm_test2, a_ft_test2, a_ensbl_test2 = avg_svm_finetune_ensemble(FEATURE_DIR, 'googlenet', PCA_PERCENTAGE)
+    # print("---------------------------------------------")
 
     print("----------------concat--------------------")
     all_p_svm_test_c, all_label_test = train_and_eval_concats(FEATURE_DIR, 'googlenet', 'alexnet', PCA_PERCENTAGE)
     print("---------------------------------------------")
-
-    print("----------------ensemble--------------------")
-    all_acc_test_e = []
-    for i in range(0, all_p_ft_test1):
-        pred = [all_p_ft_test1[i], all_p_ft_test2[i], all_p_svm_test1[i], all_p_svm_test2[i], all_p_svm_test_c[i]]
-        acc_test_e = eval_ensemble(pred, all_label_test[i])
-        all_acc_test_e.append(acc_test_e)
-
-    cal_mean_and_std(all_acc_test_e, "test_ensemble")
+    #
+    # print("----------------ensemble--------------------")
+    # all_acc_test_e = []
+    # for i in range(0, all_p_ft_test1):
+    #     pred = [all_p_ft_test1[i], all_p_ft_test2[i], all_p_svm_test1[i], all_p_svm_test2[i], all_p_svm_test_c[i]]
+    #     acc_test_e = eval_ensemble(pred, all_label_test[i])
+    #     all_acc_test_e.append(acc_test_e)
+    #
+    # cal_mean_and_std(all_acc_test_e, "test_ensemble")
 
 
 
 
 if __name__ == "__main__":
     main()
-    # pca = get_PCA(99)
-    #
-    # data = load_pickle("/home/long/Desktop/Hela_0_2018-12-04_0_alexnet.pickle")
-    # pca.fit(reshape_2D(data['train_features']))
-    # print()
