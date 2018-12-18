@@ -23,8 +23,8 @@ OUT_MODEL1 = '/home/duclong002/handcraft_models/stage1.pkl'
 OUT_MODEL2 = 'home/duclong002/handcraft_models/stage2.pkl'
 OUT_MODEL3 = '/home/duclong002/handcraft_models/stage3.pkl'
 
-FEATURE_DIR = "/home/duclong002/journal_paper_finetune/results/"
-PCA_PERCENTAGE = 95
+FEATURE_DIR = "/home/duclong002/journal_paper_finetune/archived_results/"
+PCA_PERCENTAGE = 90
 # PARAM_GRID = {'linearsvc__C': [1, 5, 10, 50]}
 
 HYPER_PARAMS = [
@@ -125,18 +125,21 @@ def train_and_eval_svm(data, pca_percentage):
     pca = get_PCA(pca_percentage)
     pca.fit(reshape_2D(data['train_features']))
     print(pca.n_components_)
+    Xtrain = pca.transform(reshape_2D(data['train_features']))
+    Xval = pca.transform(reshape_2D(data['val_features']))
+    Xtest = pca.transform(reshape_2D(data['test_features']))
 
     param_grid = gen_grid(HYPER_PARAMS)
-    cls1 = SVM_CLASSIFIER(param_grid, CLASSIFIER1, OUT_MODEL1, pca)
+    cls1 = SVM_CLASSIFIER(param_grid, CLASSIFIER1, OUT_MODEL1)
     cls1.prepare_model()
-    cls1.train(reshape_2D(data['train_features']), argmax_label(reshape_2D(data['train_labels'])))
+    cls1.train(Xtrain, argmax_label(reshape_2D(data['train_labels'])))
     print("Finish train svm")
 
     print("Now eval svm on val set")
-    cls1_val = cls1.test(reshape_2D(data['val_features']), argmax_label(reshape_2D(data['val_labels'])), data['class_names'])
+    cls1_val = cls1.test(Xval, argmax_label(reshape_2D(data['val_labels'])), data['class_names'])
 
     print("Now eval stage 1 on test set")
-    cls1_test = cls1.test(reshape_2D(data['test_features']), argmax_label(reshape_2D(data['test_labels'])), data['class_names'])
+    cls1_test = cls1.test(Xtest, argmax_label(reshape_2D(data['test_labels'])), data['class_names'])
     print("---------------------")
 
     return cls1_val['accuracy'], cls1_test['accuracy'], cls1_val['prediction'], cls1_test['prediction']
@@ -171,7 +174,7 @@ def train_and_eval_concats(dir, architecture1, architecture2, pca_percentage):
         all_label_test.append(reshape_2D(data1['test_labels']))
 
     cal_mean_and_std(all_acc_val_svm, "val_svm")
-    cal_mean_and_std(all_acc_val_svm, "test_svm")
+    cal_mean_and_std(all_acc_test_svm, "test_svm")
 
     return all_p_svm_test, all_label_test
 
