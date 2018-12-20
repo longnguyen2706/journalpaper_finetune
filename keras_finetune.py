@@ -40,7 +40,7 @@ def my_init(shape, name=None):
     return initializations.normal(shape, scale=0.01, name=name)
 
 
-def declare_model(num_classes, architecture, model_info, dropout=0):
+def declare_model(num_classes, architecture, model_info, dropout=0.5):
     if architecture == 'alexnet':
         p_model, base_model = AlexNet(model_info['pretrained_weights'])
         # print(p_model.summary())
@@ -75,7 +75,7 @@ def set_model_trainable(model, num_base_layers, num_of_last_layer_finetune):
         for layer in model.layers[(num_base_layers - num_of_last_layer_finetune):]:
             layer.trainable = True
 
-    print(model.summary())
+    # print(model.summary())
     return model
 
 # TODO: save train log, return performance result
@@ -122,7 +122,7 @@ def train_by_fit_generator(pool, image_dir, architecture, hyper_params, is_augme
 
     model.fit_generator(
         train_generator,
-        nb_epoch=50,
+        nb_epoch=100,
         samples_per_epoch=train_len // train_batch + 1,
         validation_data=validation_generator,
         nb_val_samples=validation_len // test_batch + 1,
@@ -240,10 +240,10 @@ def restore_model_weight(architecture, num_classes, model_path, freeze = True, h
     return model, num_base_layers, num_layers
 
 def _try_fit():
-    architecture = 'alexnet'
+    architecture = 'googlenet'
     model_info = create_model_info(architecture)
 
-    data_pools = load_pickle('/home/long/Desktop/Hela_split_30_2018-12-04.pickle')
+    data_pools = load_pickle('/home/duclong002/Desktop/Hela_split_30_2018-12-04.pickle')
     pool = data_pools['data']['0']
     print(pool['data_name'])
     print(len(pool['train_files']))
@@ -259,7 +259,7 @@ def _try_fit():
 
     is_augmented = False
     (X_train, Y_train), (X_val, Y_val), (X_test, Y_test) = get_np_data(pool,
-                                                                       "/mnt/6B7855B538947C4E/Dataset/JPEG_data/Hela_JPEG",
+                                                                       "/home/duclong002/Dataset/JPEG_data/Hela_JPEG",
                                                                        model_info, is_augmented)
     optimizer = optimizers.SGD(lr=0.01, decay=1e-6)
 
@@ -288,11 +288,11 @@ def _try_fit():
 def _try_generator():
     architecture = 'alexnet'
     model_info = create_model_info(architecture)
-    data_pools = load_pickle('/home/long/Desktop/Hela_split_30_2018-12-04.pickle')
+    data_pools = load_pickle('/home/duclong002/Desktop/Hela_split_30_2018-12-04.pickle')
     pool = data_pools['data']['0']
 
-    train_generator = ThreadSafeGenerator(model_info, "/mnt/6B7855B538947C4E/Dataset/JPEG_data/Hela_JPEG",
-                                     pool['train_files'], pool['train_labels'], 32, 10, True)
+    train_generator = ThreadSafeGenerator(model_info, "/home/duclong002/Dataset/JPEG_data/Hela_JPEG",
+                                     pool['train_files'], pool['train_labels'], 32, 10, False)
     for i in range(0, 100):
         batch_x, batch_y = next(train_generator)
         print(batch_x.shape)
@@ -301,4 +301,4 @@ def _try_generator():
 
 
 if __name__ == '__main__':
-    pass
+  _try_fit()

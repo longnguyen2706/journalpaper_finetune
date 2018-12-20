@@ -182,7 +182,6 @@ class ThreadSafeGenerator:
            return self.get_batch_data()
 
     def get_batch_data(self):
-        i = 0
         while True:
             batch_short_paths = []
             batch_labels = []
@@ -193,7 +192,8 @@ class ThreadSafeGenerator:
                     # c = list(zip(self.short_image_path_arr, self.labels))
                     # random.shuffle(c)
                     # self.short_image_path_arr, self.labels = zip(*c)
-                    # print("shuffled")
+                    # print("-------------shuffled-------------")
+
                 batch_short_paths.append(self.short_image_path_arr[self.i])
                 batch_labels.append(self.labels[self.i])
                 self.i += 1

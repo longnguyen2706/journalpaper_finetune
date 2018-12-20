@@ -52,14 +52,14 @@ PYTHONPATH='.' python3 finetune_master.py \
     --image_dir  '/home/duclong002/Dataset/JPEG_data/Hela_JPEG' \
     --architecture 'alexnet' \
     --start_pool  0 \
-    --end_pool 0 \
+    --end_pool 29 \
     --log_dir '/home/duclong002/journal_paper_finetune/log' \
     --save_model_dir  '/home/duclong002/journal_paper_finetune/saved_models' \
     --result_dir '/home/duclong002/journal_paper_finetune/results' \
     --train_batch  16 \
     --test_batch  32 \
-    --is_augmented True >>/home/duclong002/Desktop/finetune_log.txt
- ```
+    --is_augmented True >>/home/duclong002/Desktop/journal_paper_results/googlenet_fit_np_test_log.txt
+
 
 ### Gcloud 
 ```commandline

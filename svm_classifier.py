@@ -67,7 +67,7 @@ class SVM_CLASSIFIER:
         for p in precision:
             average_precision = average_precision + p / len(precision)
         return {'accuracy': accuracy, 'average_precision': average_precision, 'precision': precision, 'recall': recall,
-                'fscore': fscore, 'support': support}
+                'fscore': fscore, 'support': support, 'prediction': yfit}
 
     def save(self):
         joblib.dump(self.trained_model, self.out_model)
