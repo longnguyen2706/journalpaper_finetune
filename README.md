@@ -46,6 +46,7 @@ PYTHONPATH='.' python3 finetune_master.py \
     --is_augmented True >>/home/long/Desktop/finetune_log.txt
 ```
 ### Lab computer
+``` commandline
 PYTHONPATH='.' python3 finetune_master.py \
     --pool_dir  '/home/duclong002/Desktop/Hela_split_30_2018-12-04.pickle' \
     --image_dir  '/home/duclong002/Dataset/JPEG_data/Hela_JPEG' \
@@ -60,6 +61,21 @@ PYTHONPATH='.' python3 finetune_master.py \
     --is_augmented True >>/home/duclong002/Desktop/journal_paper_results/googlenet_fit_np_test_log.txt
 
 
+### Gcloud 
+```commandline
+PYTHONPATH='.' python3 finetune_master.py \
+    --pool_dir  '/home/ndlong95/Hela_split_30_2018-12-04.pickle' \
+    --image_dir  '/home/ndlong95/Dataset/JPEG_data/Hela_JPEG' \
+    --architecture 'alexnet' \
+    --start_pool  0 \
+    --end_pool 0 \
+    --log_dir '/home/ndlong95/journal_paper_finetune/log' \
+    --save_model_dir  '/home/ndlong95/journal_paper_finetune/saved_models' \
+    --result_dir '/home/ndlong95/journal_paper_finetune/results' \
+    --train_batch  16 \
+    --test_batch  32 \
+    --is_augmented True >>/home/ndlong95/finetune_alex_np_fit_log.txt
+```
 ## Reference 
 ### Alexnet 
 https://github.com/duggalrahul/AlexNet-Experiments-Keras/tree/master/convnets-keras
