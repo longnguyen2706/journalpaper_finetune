@@ -13,6 +13,7 @@ import numpy as np
 from split_data import print_split_report
 from utils import *
 
+
 sgd_hyper_params = {
     'learning_rates':[0.05,0.01, 0.005, 0.001], # u can try different values and watch. the paper use 5e-6 so u may want to try
     'lr_decays': [0, 1e-6], #[0, 1e-3, 1e-6], # u can try different values here. The paper use 0
@@ -29,7 +30,7 @@ sgd_hyper_params = {
 FINAL_HYPER_PARAMS = {
     'lr': 0.0025,
     'lr_decay': 1e-6,
-    'momentum': 0.9,
+    'momentum': 0,
     'nesterov': False
 }
 

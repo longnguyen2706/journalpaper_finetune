@@ -66,7 +66,7 @@ PYTHONPATH='.' python3 finetune_master.py \
 PYTHONPATH='.' python3 finetune_master.py \
     --pool_dir  '/home/ndlong95/Hela_split_30_2018-12-04.pickle' \
     --image_dir  '/home/ndlong95/Dataset/JPEG_data/Hela_JPEG' \
-    --architecture 'alexnet' \
+    --architecture 'googlenet' \
     --start_pool  0 \
     --end_pool 0 \
     --log_dir '/home/ndlong95/journal_paper_finetune/log' \
@@ -74,7 +74,7 @@ PYTHONPATH='.' python3 finetune_master.py \
     --result_dir '/home/ndlong95/journal_paper_finetune/results' \
     --train_batch  16 \
     --test_batch  32 \
-    --is_augmented True >>/home/ndlong95/finetune_alex_np_fit_log.txt
+    --is_augmented True >>/home/ndlong95/test_googlenet_np_fit_aug_log.txt
 ```
 ## Reference 
 ### Alexnet 

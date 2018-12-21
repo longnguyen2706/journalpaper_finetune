@@ -1,3 +1,4 @@
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -122,7 +123,7 @@ def train_by_fit_generator(pool, image_dir, architecture, hyper_params, is_augme
 
     model.fit_generator(
         train_generator,
-        nb_epoch=100,
+        nb_epoch=50,
         samples_per_epoch=train_len // train_batch + 1,
         validation_data=validation_generator,
         nb_val_samples=validation_len // test_batch + 1,

@@ -19,11 +19,11 @@ import re
 from svm_classifier import SVM_CLASSIFIER
 from utils import *
 
-OUT_MODEL1 = '/home/duclong002/handcraft_models/stage1.pkl'
-OUT_MODEL2 = 'home/duclong002/handcraft_models/stage2.pkl'
-OUT_MODEL3 = '/home/duclong002/handcraft_models/stage3.pkl'
+OUT_MODEL1 = '/home/ndlong95/handcraft_models/stage1.pkl'
+OUT_MODEL2 = 'home/ndlong95/handcraft_models/stage2.pkl'
+OUT_MODEL3 = '/home/ndlong95/handcraft_models/stage3.pkl'
 
-FEATURE_DIR = "/home/duclong002/journal_paper_finetune/archived_results/"
+FEATURE_DIR = "/home/ndlong95/journal_paper_finetune/results/"
 PCA_PERCENTAGE = 90
 # PARAM_GRID = {'linearsvc__C': [1, 5, 10, 50]}
 
